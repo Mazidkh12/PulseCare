@@ -1,0 +1,27 @@
+{% extends "base.html" %}
+
+{% block title %}Page Not Found (404){% endblock %}
+
+{% block content %}
+<div class="container text-center py-5" style="max-width: 600px;">
+    <div class="mb-4">
+        <span class="display-1 fw-bold text-warning"><i class="bi bi-exclamation-triangle"></i></span>
+    </div>
+    <h2 class="fw-bold text-dark mb-2">Resource Not Found</h2>
+    <div class="badge bg-warning-subtle text-warning-emphasis border border-warning-subtle px-3 py-2 mb-3">
+        HTTP 404 Not Found
+    </div>
+    <p class="text-muted mb-4">
+        The patient record, appointment, clinical document, or page you requested could not be located.
+        It may have been moved, reassigned, or the identifier entered in the URL is incorrect.
+    </p>
+    <div class="d-flex justify-content-center gap-2">
+        <a href="{% url 'accounts:dashboard_redirect' %}" class="btn btn-primary">
+            <i class="bi bi-house me-1"></i> Return to Dashboard
+        </a>
+        <a href="javascript:history.back()" class="btn btn-outline-secondary">
+            <i class="bi bi-arrow-left me-1"></i> Go Back
+        </a>
+    </div>
+</div>
+{% endblock %}

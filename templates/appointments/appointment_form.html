@@ -1,0 +1,285 @@
+{% extends "base.html" %}
+
+{% block title %}Book Outpatient Appointment | PulseCare{% endblock %}
+
+{% block content %}
+<div class="container-fluid px-0">
+    <!-- Breadcrumb & Header -->
+    <div class="d-flex flex-column flex-md-row align-items-md-center justify-content-between mb-4 gap-2">
+        <div>
+            <nav aria-label="breadcrumb">
+                <ol class="breadcrumb mb-1 small">
+                    <li class="breadcrumb-item"><a href="{% url 'accounts:receptionist_dashboard' %}" class="text-decoration-none">Dashboard</a></li>
+                    <li class="breadcrumb-item"><a href="{% url 'appointments:list' %}" class="text-decoration-none">Appointments</a></li>
+                    <li class="breadcrumb-item active" aria-current="page">Book Appointment</li>
+                </ol>
+            </nav>
+            <h3 class="fw-bold mb-0 text-dark">Schedule Outpatient Appointment</h3>
+            <p class="text-muted small mb-0">Book a consultation slot for an active registered patient with an on-duty specialist.</p>
+        </div>
+        <div>
+            <a href="{% url 'appointments:list' %}" class="btn btn-outline-secondary btn-sm">
+                <i class="bi bi-arrow-left me-1"></i> Back to Appointments
+            </a>
+        </div>
+    </div>
+
+    <!-- Main Booking Form Card -->
+    <div class="row justify-content-center">
+        <div class="col-lg-10 col-xl-9">
+            <div class="card border shadow-sm">
+                <div class="card-header bg-white py-3 border-bottom d-flex align-items-center justify-content-between">
+                    <div class="d-flex align-items-center gap-2">
+                        <div class="metric-icon-box metric-icon-primary" style="width: 38px; height: 38px;">
+                            <i class="bi bi-calendar-plus fs-5"></i>
+                        </div>
+                        <div>
+                            <h5 class="fw-bold mb-0 text-dark">Appointment Details</h5>
+                            <span class="text-muted small">All fields marked with <span class="text-danger">*</span> are required.</span>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="card-body p-4">
+                    {% if form.non_field_errors %}
+                    <div class="alert alert-danger d-flex align-items-start gap-2 mb-4" role="alert">
+                        <i class="bi bi-exclamation-triangle-fill fs-5 mt-1"></i>
+                        <div>
+                            {% for error in form.non_field_errors %}
+                                <div>{{ error }}</div>
+                            {% endfor %}
+                        </div>
+                    </div>
+                    {% endif %}
+
+                    <form method="post" action="{% url 'appointments:book' %}" novalidate id="appointmentForm">
+                        {% csrf_token %}
+
+                        <!-- Section 1: Patient Selection -->
+                        <div class="mb-4">
+                            <h6 class="fw-bold text-primary border-bottom pb-2 mb-3">
+                                <i class="bi bi-person-fill me-1"></i> 1. Patient Selection
+                            </h6>
+                            <div class="row g-3">
+                                <div class="col-12">
+                                    <label for="id_patient" class="form-label fw-semibold">
+                                        Select Patient <span class="text-danger">*</span>
+                                    </label>
+                                    <select name="patient" id="id_patient" class="form-select {% if form.patient.errors %}is-invalid{% endif %}" required>
+                                        <option value="">-- Choose Registered Patient (MRN / Name) --</option>
+                                        {% for p in form.fields.patient.queryset %}
+                                        <option value="{{ p.id }}" {% if form.patient.value|stringformat:"s" == p.id|stringformat:"s" %}selected{% endif %}>
+                                            [{{ p.patient_id }}] {{ p.get_full_name }} — DOB: {{ p.date_of_birth|date:"d M Y" }} (Ph: {{ p.contact_number|default:"N/A" }})
+                                        </option>
+                                        {% endfor %}
+                                    </select>
+                                    {% if form.patient.errors %}
+                                    <div class="invalid-feedback">
+                                        {{ form.patient.errors|join:", " }}
+                                    </div>
+                                    {% endif %}
+                                    <div class="form-text">
+                                        Patient not found? <a href="{% url 'patients:register' %}" class="fw-semibold text-primary" target="_blank">Register New Patient</a> first.
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Section 2: Department & Doctor (Dependent dropdown) -->
+                        <div class="mb-4">
+                            <h6 class="fw-bold text-primary border-bottom pb-2 mb-3">
+                                <i class="bi bi-hospital me-1"></i> 2. Clinical Specialty &amp; Attending Physician
+                            </h6>
+                            <div class="row g-3">
+                                <div class="col-md-6">
+                                    <label for="id_department" class="form-label fw-semibold">
+                                        Clinical Department <span class="text-danger">*</span>
+                                    </label>
+                                    <select name="department" id="id_department" class="form-select {% if form.department.errors %}is-invalid{% endif %}" required>
+                                        <option value="">-- Select Department --</option>
+                                        {% for dept in form.fields.department.queryset %}
+                                        <option value="{{ dept.id }}" {% if form.department.value|stringformat:"s" == dept.id|stringformat:"s" %}selected{% endif %}>
+                                            {{ dept.name }}
+                                        </option>
+                                        {% endfor %}
+                                    </select>
+                                    {% if form.department.errors %}
+                                    <div class="invalid-feedback">
+                                        {{ form.department.errors|join:", " }}
+                                    </div>
+                                    {% endif %}
+                                    <div class="form-text">Filter specialist doctors by clinical discipline.</div>
+                                </div>
+
+                                <div class="col-md-6">
+                                    <label for="id_doctor" class="form-label fw-semibold">
+                                        Attending Doctor <span class="text-danger">*</span>
+                                    </label>
+                                    <select name="doctor" id="id_doctor" class="form-select {% if form.doctor.errors %}is-invalid{% endif %}" required>
+                                        <option value="">-- Select Doctor --</option>
+                                        {% for doc in active_doctors %}
+                                        <option value="{{ doc.id }}"
+                                                data-department-id="{{ doc.department_id }}"
+                                                {% if form.doctor.value|stringformat:"s" == doc.id|stringformat:"s" %}selected{% endif %}>
+                                            Dr. {{ doc.user.get_full_name|default:doc.user.username }} ({{ doc.department.name }} - Room: {{ doc.room_number|default:"N/A" }})
+                                        </option>
+                                        {% endfor %}
+                                    </select>
+                                    {% if form.doctor.errors %}
+                                    <div class="invalid-feedback">
+                                        {{ form.doctor.errors|join:", " }}
+                                    </div>
+                                    {% endif %}
+                                    <div class="form-text" id="doctorHelpText">Doctors belonging to the selected department will be shown.</div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Section 3: Schedule Date & Slot -->
+                        <div class="mb-4">
+                            <h6 class="fw-bold text-primary border-bottom pb-2 mb-3">
+                                <i class="bi bi-clock-history me-1"></i> 3. Date &amp; Time Slot
+                            </h6>
+                            <div class="row g-3">
+                                <div class="col-md-4">
+                                    <label for="id_appointment_date" class="form-label fw-semibold">
+                                        Appointment Date <span class="text-danger">*</span>
+                                    </label>
+                                    <input type="date" name="appointment_date" id="id_appointment_date"
+                                           class="form-control {% if form.appointment_date.errors %}is-invalid{% endif %}"
+                                           value="{{ form.appointment_date.value|default:'' }}" required>
+                                    {% if form.appointment_date.errors %}
+                                    <div class="invalid-feedback">
+                                        {{ form.appointment_date.errors|join:", " }}
+                                    </div>
+                                    {% endif %}
+                                    <div class="form-text">Appointments cannot be booked in the past.</div>
+                                </div>
+
+                                <div class="col-md-4">
+                                    <label for="id_start_time" class="form-label fw-semibold">
+                                        Start Time <span class="text-danger">*</span>
+                                    </label>
+                                    <input type="time" name="start_time" id="id_start_time"
+                                           class="form-control {% if form.start_time.errors %}is-invalid{% endif %}"
+                                           value="{{ form.start_time.value|default:'' }}" required>
+                                    {% if form.start_time.errors %}
+                                    <div class="invalid-feedback">
+                                        {{ form.start_time.errors|join:", " }}
+                                    </div>
+                                    {% endif %}
+                                </div>
+
+                                <div class="col-md-4">
+                                    <label for="id_end_time" class="form-label fw-semibold">
+                                        End Time <span class="text-danger">*</span>
+                                    </label>
+                                    <input type="time" name="end_time" id="id_end_time"
+                                           class="form-control {% if form.end_time.errors %}is-invalid{% endif %}"
+                                           value="{{ form.end_time.value|default:'' }}" required>
+                                    {% if form.end_time.errors %}
+                                    <div class="invalid-feedback">
+                                        {{ form.end_time.errors|join:", " }}
+                                    </div>
+                                    {% endif %}
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Section 4: Clinical Reason & Administrative Notes -->
+                        <div class="mb-4">
+                            <h6 class="fw-bold text-primary border-bottom pb-2 mb-3">
+                                <i class="bi bi-card-text me-1"></i> 4. Visit Details
+                            </h6>
+                            <div class="row g-3">
+                                <div class="col-md-6">
+                                    <label for="id_reason" class="form-label fw-semibold">
+                                        Reason for Visit <span class="text-danger">*</span>
+                                    </label>
+                                    <textarea name="reason" id="id_reason" rows="3"
+                                              class="form-control {% if form.reason.errors %}is-invalid{% endif %}"
+                                              placeholder="Chief complaint or symptoms reported by patient" required>{{ form.reason.value|default:'' }}</textarea>
+                                    {% if form.reason.errors %}
+                                    <div class="invalid-feedback">
+                                        {{ form.reason.errors|join:", " }}
+                                    </div>
+                                    {% endif %}
+                                </div>
+
+                                <div class="col-md-6">
+                                    <label for="id_notes" class="form-label fw-semibold">
+                                        Administrative Notes <span class="text-muted fw-normal">(Optional)</span>
+                                    </label>
+                                    <textarea name="notes" id="id_notes" rows="3"
+                                              class="form-control {% if form.notes.errors %}is-invalid{% endif %}"
+                                              placeholder="Non-clinical front-desk notes (e.g. wheelchair requested, VIP, interpreter needed)">{{ form.notes.value|default:'' }}</textarea>
+                                    {% if form.notes.errors %}
+                                    <div class="invalid-feedback">
+                                        {{ form.notes.errors|join:", " }}
+                                    </div>
+                                    {% endif %}
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Actions -->
+                        <div class="d-flex align-items-center justify-content-end gap-2 pt-3 border-top">
+                            <a href="{% url 'appointments:list' %}" class="btn btn-light border px-4">Cancel</a>
+                            <button type="submit" class="btn btn-primary px-4 fw-semibold">
+                                <i class="bi bi-calendar-check me-1"></i> Confirm &amp; Book Appointment
+                            </button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Dependent Department-Doctor Filter JS -->
+<script>
+document.addEventListener("DOMContentLoaded", function () {
+    const departmentSelect = document.getElementById("id_department");
+    const doctorSelect = document.getElementById("id_doctor");
+
+    if (!departmentSelect || !doctorSelect) return;
+
+    // Cache original doctor options
+    const originalOptions = Array.from(doctorSelect.options);
+
+    function filterDoctors() {
+        const selectedDeptId = departmentSelect.value;
+        const currentSelectedDoctor = doctorSelect.value;
+
+        // Clear current options except placeholder
+        doctorSelect.innerHTML = "";
+        doctorSelect.appendChild(originalOptions[0]); // placeholder
+
+        let hasSelected = false;
+
+        originalOptions.slice(1).forEach(option => {
+            const deptId = option.getAttribute("data-department-id");
+            if (!selectedDeptId || deptId === selectedDeptId) {
+                const clone = option.cloneNode(true);
+                if (clone.value === currentSelectedDoctor) {
+                    clone.selected = true;
+                    hasSelected = true;
+                }
+                doctorSelect.appendChild(clone);
+            }
+        });
+
+        if (!hasSelected && currentSelectedDoctor) {
+            doctorSelect.value = "";
+        }
+    }
+
+    departmentSelect.addEventListener("change", filterDoctors);
+
+    // Initial filter if department is already selected
+    if (departmentSelect.value) {
+        filterDoctors();
+    }
+});
+</script>
+{% endblock %}

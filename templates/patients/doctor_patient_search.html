@@ -1,0 +1,146 @@
+{% extends "base.html" %}
+
+{% block title %}Patient History Search | PulseCare{% endblock %}
+
+{% block content %}
+<div class="container-fluid px-0">
+    <!-- Header -->
+    <div class="d-flex flex-column flex-md-row align-items-md-center justify-content-between mb-4 gap-2">
+        <div>
+            <nav aria-label="breadcrumb">
+                <ol class="breadcrumb mb-1 small">
+                    <li class="breadcrumb-item"><a href="{% url 'accounts:doctor_dashboard' %}" class="text-decoration-none">Dashboard</a></li>
+                    <li class="breadcrumb-item active" aria-current="page">Patient Search</li>
+                </ol>
+            </nav>
+            <h3 class="fw-bold mb-0 text-dark">Patient Medical History Search</h3>
+            <p class="text-muted small mb-0">Search registered outpatient records to review past clinical histories and medication timelines.</p>
+        </div>
+        <div>
+            <a href="{% url 'accounts:doctor_dashboard' %}" class="btn btn-outline-secondary btn-sm">
+                <i class="bi bi-arrow-left me-1"></i> Back to Dashboard
+            </a>
+        </div>
+    </div>
+
+    <!-- Search Card -->
+    <div class="card border shadow-sm mb-4">
+        <div class="card-body p-3">
+            <form method="get" action="{% url 'patients:doctor_patient_search' %}" class="row g-2 align-items-center">
+                <div class="col-md-9">
+                    <div class="input-group">
+                        <span class="input-group-text bg-white border-end-0 text-muted"><i class="bi bi-search"></i></span>
+                        <input type="text" name="q" value="{{ q }}" class="form-control border-start-0"
+                               placeholder="Search patient by MRN (P-YYYY-NNNN), full name, or contact number...">
+                    </div>
+                </div>
+                <div class="col-md-3 d-flex gap-2">
+                    <button type="submit" class="btn btn-primary w-100 fw-semibold">
+                        <i class="bi bi-search me-1"></i> Search
+                    </button>
+                    {% if q %}
+                    <a href="{% url 'patients:doctor_patient_search' %}" class="btn btn-outline-secondary" title="Clear Search">
+                        <i class="bi bi-x-lg"></i>
+                    </a>
+                    {% endif %}
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- Results Table Card -->
+    <div class="card border shadow-sm">
+        <div class="card-header bg-white py-3 border-bottom d-flex align-items-center justify-content-between">
+            <h6 class="fw-bold mb-0 text-dark">
+                <i class="bi bi-people-fill me-1 text-primary"></i> Outpatient Master Registry
+            </h6>
+            <span class="badge bg-light text-dark border">{{ total_count }} Record{{ total_count|pluralize }}</span>
+        </div>
+
+        <div class="table-responsive">
+            <table class="table table-hover align-middle mb-0">
+                <thead class="table-light text-muted small text-uppercase">
+                    <tr>
+                        <th style="width: 140px;">MRN</th>
+                        <th>Patient Name</th>
+                        <th>Gender &amp; DOB</th>
+                        <th>Blood Group</th>
+                        <th>Contact Number</th>
+                        <th class="text-end" style="width: 200px;">Clinical Action</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for patient in patients %}
+                    <tr>
+                        <td>
+                            <span class="badge bg-light text-secondary border font-monospace fs-6">
+                                {{ patient.patient_id }}
+                            </span>
+                        </td>
+                        <td>
+                            <div class="fw-bold text-dark">{{ patient.get_full_name }}</div>
+                            <div class="text-muted small">{{ patient.city|default:"" }}{% if patient.city and patient.state %}, {% endif %}{{ patient.state|default:"" }}</div>
+                        </td>
+                        <td>
+                            <div>{{ patient.get_gender_display }}</div>
+                            <div class="small text-muted">DOB: {{ patient.date_of_birth|date:"d M Y" }}</div>
+                        </td>
+                        <td>
+                            <span class="badge bg-light text-dark border">{{ patient.blood_group }}</span>
+                        </td>
+                        <td>
+                            {% if patient.contact_number %}
+                            <span><i class="bi bi-telephone text-muted me-1"></i> {{ patient.contact_number }}</span>
+                            {% else %}
+                            <span class="text-muted small">N/A</span>
+                            {% endif %}
+                        </td>
+                        <td class="text-end">
+                            <div class="d-inline-flex gap-1">
+                                <a href="{% url 'patients:doctor_history' patient.pk %}" class="btn btn-primary btn-sm py-1 px-2 fw-semibold">
+                                    <i class="bi bi-clock-history me-1"></i> Full History
+                                </a>
+                                <a href="{% url 'consultations:create' %}?patient_id={{ patient.pk }}" class="btn btn-outline-success btn-sm py-1 px-2" title="Start Walk-in Consultation">
+                                    <i class="bi bi-plus-lg"></i> Consult
+                                </a>
+                            </div>
+                        </td>
+                    </tr>
+                    {% empty %}
+                    <tr>
+                        <td colspan="6" class="text-center py-5 text-muted">
+                            <i class="bi bi-person-x fs-1 d-block mb-2"></i>
+                            <h6 class="fw-bold">No Patients Found</h6>
+                            <p class="small mb-0">No patient records matched the search query.</p>
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+
+        {% if patients.has_other_pages %}
+        <div class="card-footer bg-white py-3 border-top d-flex justify-content-between align-items-center">
+            <span class="text-muted small">Showing page {{ patients.number }} of {{ patients.paginator.num_pages }}</span>
+            <ul class="pagination pagination-sm mb-0">
+                {% if patients.has_previous %}
+                <li class="page-item"><a class="page-link" href="?page={{ patients.previous_page_number }}&q={{ q }}">&laquo; Prev</a></li>
+                {% else %}<li class="page-item disabled"><span class="page-link">&laquo; Prev</span></li>{% endif %}
+
+                {% for pnum in patients.paginator.page_range %}
+                    {% if pnum == patients.number %}
+                    <li class="page-item active"><span class="page-link">{{ pnum }}</span></li>
+                    {% elif pnum > patients.number|add:"-3" and pnum < patients.number|add:"3" %}
+                    <li class="page-item"><a class="page-link" href="?page={{ pnum }}&q={{ q }}">{{ pnum }}</a></li>
+                    {% endif %}
+                {% endfor %}
+
+                {% if patients.has_next %}
+                <li class="page-item"><a class="page-link" href="?page={{ patients.next_page_number }}&q={{ q }}">Next &raquo;</a></li>
+                {% else %}<li class="page-item disabled"><span class="page-link">Next &raquo;</span></li>{% endif %}
+            </ul>
+        </div>
+        {% endif %}
+    </div>
+</div>
+{% endblock %}

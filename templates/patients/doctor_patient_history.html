@@ -1,0 +1,274 @@
+{% extends "base.html" %}
+
+{% block title %}Medical History &bull; {{ patient.get_full_name }} | PulseCare{% endblock %}
+
+{% block content %}
+<div class="container-fluid px-0">
+    <!-- Header -->
+    <div class="d-flex flex-column flex-md-row align-items-md-center justify-content-between mb-4 gap-2">
+        <div>
+            <nav aria-label="breadcrumb">
+                <ol class="breadcrumb mb-1 small">
+                    <li class="breadcrumb-item"><a href="{% url 'accounts:doctor_dashboard' %}" class="text-decoration-none">Dashboard</a></li>
+                    <li class="breadcrumb-item"><a href="{% url 'patients:doctor_patient_search' %}" class="text-decoration-none">Patient Search</a></li>
+                    <li class="breadcrumb-item active" aria-current="page">Medical History</li>
+                </ol>
+            </nav>
+            <h3 class="fw-bold mb-0 text-dark">Comprehensive Clinical History &amp; Timeline</h3>
+            <p class="text-muted small mb-0">Longitudinal outpatient case record for treating physician review.</p>
+        </div>
+        <div class="d-flex align-items-center gap-2">
+            <a href="{% url 'consultations:create' %}?patient_id={{ patient.pk }}" class="btn btn-primary btn-sm fw-semibold">
+                <i class="bi bi-plus-circle me-1"></i> New Consultation Session
+            </a>
+            <a href="{% url 'patients:doctor_patient_search' %}" class="btn btn-outline-secondary btn-sm">
+                <i class="bi bi-arrow-left me-1"></i> Back to Search
+            </a>
+        </div>
+    </div>
+
+    <!-- Patient Master Card -->
+    <div class="card border shadow-sm mb-4 bg-light">
+        <div class="card-body p-4">
+            <div class="row g-3 align-items-center">
+                <div class="col-md-5">
+                    <div class="d-flex align-items-center gap-3">
+                        <div class="metric-icon-box metric-icon-primary" style="width: 50px; height: 50px;">
+                            <i class="bi bi-person-fill fs-3"></i>
+                        </div>
+                        <div>
+                            <h4 class="fw-bold mb-0 text-dark">{{ patient.get_full_name }}</h4>
+                            <span class="badge bg-secondary font-monospace">{{ patient.patient_id }}</span>
+                            <span class="text-muted small ms-2">
+                                {{ patient.get_gender_display }} &bull; DOB: {{ patient.date_of_birth|date:"d M Y" }}
+                            </span>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="col-md-3">
+                    <div class="small text-muted">Blood Group: <strong class="text-dark">{{ patient.blood_group }}</strong></div>
+                    <div class="small text-muted">Phone: <strong class="text-dark">{{ patient.contact_number|default:"N/A" }}</strong></div>
+                    <div class="small text-muted">Emergency Contact: <strong class="text-dark">{{ patient.emergency_contact_name|default:"N/A" }} ({{ patient.emergency_contact_number|default:"N/A" }})</strong></div>
+                </div>
+
+                <div class="col-md-4">
+                    <div class="small text-muted">Address: <span class="text-dark">{{ patient.address|default:"N/A" }}, {{ patient.city|default:"" }} {{ patient.state|default:"" }} {{ patient.pincode|default:"" }}</span></div>
+                    <div class="small text-muted mt-1">Master Record Registered: {{ patient.created_at|date:"d M Y" }}</div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Allergies & Chronic Conditions Card -->
+    <div class="row g-4 mb-4">
+        <!-- Recorded Allergies -->
+        <div class="col-md-6">
+            <div class="card border shadow-sm h-100">
+                <div class="card-header bg-white py-3 border-bottom d-flex align-items-center justify-content-between">
+                    <h6 class="fw-bold mb-0 text-danger">
+                        <i class="bi bi-exclamation-triangle-fill me-1"></i> Recorded Allergies &amp; Intolerances
+                    </h6>
+                    <span class="badge bg-danger-subtle text-danger">{{ allergies|length }}</span>
+                </div>
+                <div class="card-body p-3">
+                    {% for allergy in allergies %}
+                    <div class="d-flex align-items-center justify-content-between p-2 border rounded mb-2 bg-light">
+                        <div>
+                            <strong class="text-dark">{{ allergy.allergen }}</strong>
+                            {% if allergy.reaction %}<div class="small text-muted">Reaction: {{ allergy.reaction }}</div>{% endif %}
+                        </div>
+                        <span class="badge {% if allergy.severity == 'SEVERE' %}bg-danger{% elif allergy.severity == 'MODERATE' %}bg-warning text-dark{% else %}bg-secondary{% endif %}">
+                            {{ allergy.get_severity_display }}
+                        </span>
+                    </div>
+                    {% empty %}
+                    <div class="text-muted small py-2 text-center">No known drug or environmental allergies recorded.</div>
+                    {% endfor %}
+                </div>
+            </div>
+        </div>
+
+        <!-- Chronic Medical History -->
+        <div class="col-md-6">
+            <div class="card border shadow-sm h-100">
+                <div class="card-header bg-white py-3 border-bottom d-flex align-items-center justify-content-between">
+                    <h6 class="fw-bold mb-0 text-primary">
+                        <i class="bi bi-journal-medical me-1"></i> Chronic Medical History
+                    </h6>
+                    <span class="badge bg-primary-subtle text-primary">{{ medical_histories|length }}</span>
+                </div>
+                <div class="card-body p-3">
+                    {% for mh in medical_histories %}
+                    <div class="d-flex align-items-center justify-content-between p-2 border rounded mb-2 bg-light">
+                        <div>
+                            <strong class="text-dark">{{ mh.condition }}</strong>
+                            {% if mh.notes %}<div class="small text-muted">{{ mh.notes }}</div>{% endif %}
+                        </div>
+                        <div class="text-muted small">
+                            {% if mh.diagnosed_date %}Since {{ mh.diagnosed_date|date:"Y" }}{% else %}Diagnosed{% endif %}
+                        </div>
+                    </div>
+                    {% empty %}
+                    <div class="text-muted small py-2 text-center">No previous chronic medical histories recorded.</div>
+                    {% endfor %}
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Chronological Consultation Timeline -->
+    <div class="card border shadow-sm">
+        <div class="card-header bg-white py-3 border-bottom d-flex align-items-center justify-content-between">
+            <h6 class="fw-bold mb-0 text-dark">
+                <i class="bi bi-clock-history me-1 text-teal"></i> Longitudinal Clinical Timeline (Newest First)
+            </h6>
+            <span class="badge bg-light text-dark border">{{ consultations|length }} Visit{{ consultations|length|pluralize }}</span>
+        </div>
+
+        <div class="card-body p-4">
+            {% for c in consultations %}
+            <div class="timeline-item mb-5 pb-4 border-bottom position-relative">
+                <div class="d-flex flex-column flex-md-row align-items-md-center justify-content-between mb-3 gap-2">
+                    <div class="d-flex align-items-center gap-2">
+                        <div class="metric-icon-box metric-icon-primary" style="width: 38px; height: 38px;">
+                            <i class="bi bi-file-earmark-medical"></i>
+                        </div>
+                        <div>
+                            <h6 class="fw-bold mb-0 text-dark">
+                                Consultation &bull; {{ c.consultation_date|date:"l, F j, Y - H:i" }}
+                            </h6>
+                            <div class="small text-muted">
+                                Treating Doctor: <strong>Dr. {{ c.doctor.user.get_full_name|default:c.doctor.user.username }}</strong> ({{ c.doctor.department.name }})
+                            </div>
+                        </div>
+                    </div>
+                    <div>
+                        {% if c.appointment %}
+                        <span class="badge bg-secondary-subtle text-secondary border me-1">Appt #{{ c.appointment.id }}</span>
+                        {% else %}
+                        <span class="badge bg-info-subtle text-info border me-1">Walk-in</span>
+                        {% endif %}
+                        {% if c.status == "FINALIZED" %}
+                        <span class="badge bg-success-subtle text-success border border-success-subtle">Finalized</span>
+                        {% else %}
+                        <span class="badge bg-warning-subtle text-warning border border-warning-subtle">Draft</span>
+                        {% endif %}
+                    </div>
+                </div>
+
+                <!-- Case-Taking Notes -->
+                <div class="row g-3 mb-3">
+                    <div class="col-md-6">
+                        <div class="p-3 bg-light rounded border h-100">
+                            <strong class="small text-uppercase text-secondary d-block mb-1">Chief Complaint:</strong>
+                            <p class="mb-2 text-dark">{{ c.chief_complaint }}</p>
+                            {% if c.history_of_present_illness %}
+                            <strong class="small text-uppercase text-secondary d-block mb-1">History of Present Illness:</strong>
+                            <p class="small text-muted mb-0">{{ c.history_of_present_illness }}</p>
+                            {% endif %}
+                        </div>
+                    </div>
+
+                    <div class="col-md-6">
+                        <div class="p-3 bg-light rounded border h-100">
+                            <strong class="small text-uppercase text-secondary d-block mb-1">Physical Examination &amp; Assessment:</strong>
+                            <p class="small text-dark mb-2">{{ c.physical_examination|default:"Not recorded" }}</p>
+                            {% if c.treatment_plan %}
+                            <strong class="small text-uppercase text-secondary d-block mb-1">Management Plan:</strong>
+                            <p class="small text-muted mb-0">{{ c.treatment_plan }}</p>
+                            {% endif %}
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Vitals Snapshot -->
+                {% if c.vitals %}
+                <div class="p-2 px-3 bg-white rounded border mb-3 small d-flex flex-wrap gap-4 align-items-center">
+                    <div><span class="text-muted">BP:</span> <strong>{{ c.vitals.systolic_bp|default:"--" }}/{{ c.vitals.diastolic_bp|default:"--" }} mmHg</strong></div>
+                    <div><span class="text-muted">Pulse:</span> <strong>{{ c.vitals.pulse_rate|default:"--" }} bpm</strong></div>
+                    <div><span class="text-muted">Resp Rate:</span> <strong>{{ c.vitals.respiratory_rate|default:"--" }}/min</strong></div>
+                    <div><span class="text-muted">Temp:</span> <strong>{{ c.vitals.temperature|default:"--" }} &deg;C</strong></div>
+                    <div><span class="text-muted">SpO2:</span> <strong>{{ c.vitals.spo2|default:"--" }}%</strong></div>
+                    <div><span class="text-muted">BMI:</span> <strong class="text-primary">{{ c.vitals.bmi|default:"--" }} kg/m&sup2;</strong></div>
+                </div>
+                {% endif %}
+
+                <!-- Diagnoses -->
+                {% if c.diagnoses.all %}
+                <div class="mb-3">
+                    <span class="small fw-bold text-muted me-2">Diagnoses:</span>
+                    {% for diag in c.diagnoses.all %}
+                    <span class="badge {% if diag.diagnosis_type == 'PRIMARY' %}bg-primary{% else %}bg-secondary{% endif %} me-1">
+                        {{ diag.get_diagnosis_type_display }}: {{ diag.diagnosis_name }}{% if diag.diagnosis_code %} ({{ diag.diagnosis_code }}){% endif %}
+                    </span>
+                    {% endfor %}
+                </div>
+                {% endif %}
+
+                <!-- Issued Prescription -->
+                {% if c.prescription %}
+                <div class="p-3 border rounded bg-light mb-2">
+                    <div class="d-flex align-items-center justify-content-between mb-2">
+                        <div class="fw-semibold text-teal">
+                            <i class="bi bi-prescription2 me-1"></i> Prescription: {{ c.prescription.prescription_number }}
+                            <span class="badge bg-success-subtle text-success border border-success-subtle ms-2">{{ c.prescription.get_status_display }}</span>
+                        </div>
+                        <a href="{% url 'prescriptions:detail' c.prescription.pk %}" class="btn btn-outline-secondary btn-sm py-0 px-2" target="_blank">
+                            <i class="bi bi-printer"></i> View Rx
+                        </a>
+                    </div>
+                    {% if c.prescription.items.all %}
+                    <div class="table-responsive">
+                        <table class="table table-sm table-bordered bg-white mb-0 small">
+                            <thead class="table-light">
+                                <tr>
+                                    <th>Medicine</th>
+                                    <th>Form</th>
+                                    <th>Dosage</th>
+                                    <th>Frequency</th>
+                                    <th>Duration</th>
+                                    <th>Timing</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for item in c.prescription.items.all %}
+                                <tr>
+                                    <td class="fw-semibold">{{ item.medicine_name }} {% if item.strength %}({{ item.strength }}){% endif %}</td>
+                                    <td>{{ item.get_dosage_form_display }}</td>
+                                    <td>{{ item.dosage }}</td>
+                                    <td>{{ item.frequency }}</td>
+                                    <td>{{ item.duration }} days</td>
+                                    <td>{{ item.get_intake_timing_display }}</td>
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                    {% endif %}
+                </div>
+                {% endif %}
+
+                <!-- Follow-up -->
+                {% if c.follow_up_date or c.follow_up_notes %}
+                <div class="small text-muted mt-2">
+                    <i class="bi bi-calendar-event text-teal me-1"></i>
+                    {% if c.follow_up_date %}<strong>Next Follow-up:</strong> {{ c.follow_up_date|date:"d M Y" }}{% endif %}
+                    {% if c.follow_up_notes %}&bull; {{ c.follow_up_notes }}{% endif %}
+                </div>
+                {% endif %}
+            </div>
+            {% empty %}
+            <div class="text-center py-5 text-muted">
+                <i class="bi bi-folder-x fs-1 d-block mb-2"></i>
+                <h6 class="fw-bold">No Clinical Consultations Recorded</h6>
+                <p class="small mb-3">This patient has no recorded consultations or visits in the system yet.</p>
+                <a href="{% url 'consultations:create' %}?patient_id={{ patient.pk }}" class="btn btn-primary btn-sm">
+                    <i class="bi bi-plus-lg me-1"></i> Open First Consultation
+                </a>
+            </div>
+            {% endfor %}
+        </div>
+    </div>
+</div>
+{% endblock %}

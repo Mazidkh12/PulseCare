@@ -1,0 +1,172 @@
+{% extends "base.html" %}
+
+{% block title %}Operational Reports & Analytics{% endblock %}
+
+{% block content %}
+<div class="container-fluid px-0">
+    <!-- Header -->
+    <div class="d-flex flex-column flex-md-row align-items-md-center justify-content-between mb-4 gap-2">
+        <div>
+            <h3 class="fw-bold mb-1 text-dark">Clinic Operational Reports & Export Center</h3>
+            <p class="text-muted small mb-0">Generate, download CSV spreadsheets, and print official operational reports.</p>
+        </div>
+        <div>
+            <a href="{% url 'reports:printable' %}?preset={{ preset }}&start_date={{ start_date }}&end_date={{ end_date }}" target="_blank" class="btn btn-outline-dark">
+                <i class="bi bi-printer me-1"></i> Open Printable Report
+            </a>
+        </div>
+    </div>
+
+    <!-- Date Range Selector -->
+    <div class="card border shadow-sm mb-4">
+        <div class="card-header bg-white py-3 border-bottom">
+            <h5 class="card-title fw-bold mb-0 text-dark">
+                <i class="bi bi-funnel me-2 text-primary"></i> Report Parameters & Date Range
+            </h5>
+        </div>
+        <div class="card-body p-3">
+            <form method="get" class="row g-3 align-items-end">
+                <div class="col-md-3">
+                    <label class="form-label small fw-semibold text-muted">Preset Period</label>
+                    <select name="preset" class="form-select">
+                        <option value="today" {% if preset == 'today' %}selected{% endif %}>Today</option>
+                        <option value="last_7_days" {% if preset == 'last_7_days' %}selected{% endif %}>Last 7 Days</option>
+                        <option value="last_30_days" {% if preset == 'last_30_days' %}selected{% endif %}>Last 30 Days</option>
+                        <option value="custom" {% if preset == 'custom' %}selected{% endif %}>Custom Range</option>
+                    </select>
+                </div>
+                <div class="col-md-3">
+                    <label class="form-label small fw-semibold text-muted">Start Date</label>
+                    <input type="date" name="start_date" value="{{ start_date }}" class="form-control">
+                </div>
+                <div class="col-md-3">
+                    <label class="form-label small fw-semibold text-muted">End Date</label>
+                    <input type="date" name="end_date" value="{{ end_date }}" class="form-control">
+                </div>
+                <div class="col-md-3">
+                    <button type="submit" class="btn btn-dark w-100">
+                        <i class="bi bi-arrow-repeat me-1"></i> Apply Parameters
+                    </button>
+                </div>
+            </form>
+            <div class="mt-2 text-muted small">
+                Current active reporting window: <strong>{{ start_date }}</strong> to <strong>{{ end_date }}</strong>
+            </div>
+        </div>
+    </div>
+
+    <!-- Available Reports Grid -->
+    <div class="row g-4 mb-4">
+        <!-- Patient Registrations Report -->
+        <div class="col-md-6 col-lg-3">
+            <div class="card border shadow-sm h-100">
+                <div class="card-body p-4 d-flex flex-column">
+                    <div class="d-flex align-items-center gap-3 mb-3">
+                        <div class="p-3 bg-primary-subtle text-primary rounded-3 fs-3">
+                            <i class="bi bi-people-fill"></i>
+                        </div>
+                        <div>
+                            <h5 class="fw-bold mb-1 text-dark">Patient Registry</h5>
+                            <span class="badge bg-light text-dark border">Demographics</span>
+                        </div>
+                    </div>
+                    <p class="text-muted small flex-grow-1">
+                        Export complete master list of registered patients including MRN, registration date, gender, and status.
+                    </p>
+                    <div class="border-top pt-3">
+                        <a href="{% url 'reports:export_patients' %}" class="btn btn-primary w-100 btn-sm">
+                            <i class="bi bi-download me-1"></i> Download CSV
+                        </a>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Appointment Volume Report -->
+        <div class="col-md-6 col-lg-3">
+            <div class="card border shadow-sm h-100">
+                <div class="card-body p-4 d-flex flex-column">
+                    <div class="d-flex align-items-center gap-3 mb-3">
+                        <div class="p-3 bg-success-subtle text-success rounded-3 fs-3">
+                            <i class="bi bi-calendar2-check-fill"></i>
+                        </div>
+                        <div>
+                            <h5 class="fw-bold mb-1 text-dark">Appointments</h5>
+                            <span class="badge bg-light text-dark border">Volume & Status</span>
+                        </div>
+                    </div>
+                    <p class="text-muted small flex-grow-1">
+                        Outpatient appointments by date, doctor, department, time slot, and completion status.
+                    </p>
+                    <div class="border-top pt-3">
+                        <a href="{% url 'reports:export_appointments' %}?preset={{ preset }}&start_date={{ start_date }}&end_date={{ end_date }}" class="btn btn-success w-100 btn-sm">
+                            <i class="bi bi-download me-1"></i> Download CSV
+                        </a>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Department Operational Report -->
+        <div class="col-md-6 col-lg-3">
+            <div class="card border shadow-sm h-100">
+                <div class="card-body p-4 d-flex flex-column">
+                    <div class="d-flex align-items-center gap-3 mb-3">
+                        <div class="p-3 bg-info-subtle text-info rounded-3 fs-3">
+                            <i class="bi bi-diagram-3-fill"></i>
+                        </div>
+                        <div>
+                            <h5 class="fw-bold mb-1 text-dark">Departments</h5>
+                            <span class="badge bg-light text-dark border">Specialty Stats</span>
+                        </div>
+                    </div>
+                    <p class="text-muted small flex-grow-1">
+                        Aggregated departmental throughput: total visits, completions, cancellations, and active staffing.
+                    </p>
+                    <div class="border-top pt-3">
+                        <a href="{% url 'reports:export_departments' %}?preset={{ preset }}&start_date={{ start_date }}&end_date={{ end_date }}" class="btn btn-info w-100 btn-sm text-white">
+                            <i class="bi bi-download me-1"></i> Download CSV
+                        </a>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Doctor Workload Report -->
+        <div class="col-md-6 col-lg-3">
+            <div class="card border shadow-sm h-100">
+                <div class="card-body p-4 d-flex flex-column">
+                    <div class="d-flex align-items-center gap-3 mb-3">
+                        <div class="p-3 bg-warning-subtle text-warning-emphasis rounded-3 fs-3">
+                            <i class="bi bi-person-badge-fill"></i>
+                        </div>
+                        <div>
+                            <h5 class="fw-bold mb-1 text-dark">Doctor Workload</h5>
+                            <span class="badge bg-light text-dark border">Clinical Hours</span>
+                        </div>
+                    </div>
+                    <p class="text-muted small flex-grow-1">
+                        Consultation throughput, case finalizations, and active appointments allocated per physician.
+                    </p>
+                    <div class="border-top pt-3">
+                        <a href="{% url 'reports:export_doctor_workload' %}?preset={{ preset }}&start_date={{ start_date }}&end_date={{ end_date }}" class="btn btn-warning w-100 btn-sm text-dark">
+                            <i class="bi bi-download me-1"></i> Download CSV
+                        </a>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Security & Formula Injection Notice -->
+    <div class="card border bg-light text-muted p-3 small">
+        <div class="d-flex align-items-start gap-2">
+            <i class="bi bi-shield-check text-success fs-5"></i>
+            <div>
+                <strong>Security Assurance:</strong> All CSV reports use UTF-8 BOM encoding and active spreadsheet formula injection protection (CWE-1236).
+                To protect confidentiality, operational reports strictly omit sensitive clinical narratives, physical examination notes, and prescription instructions.
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

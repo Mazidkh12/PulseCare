@@ -1,0 +1,293 @@
+{% extends "base.html" %}
+
+{% block title %}Appointment Directory | PulseCare{% endblock %}
+
+{% block content %}
+<div class="container-fluid px-0">
+    <!-- Header -->
+    <div class="d-flex flex-column flex-md-row align-items-md-center justify-content-between mb-4 gap-2">
+        <div>
+            <nav aria-label="breadcrumb">
+                <ol class="breadcrumb mb-1 small">
+                    <li class="breadcrumb-item"><a href="{% url 'accounts:receptionist_dashboard' %}" class="text-decoration-none">Dashboard</a></li>
+                    <li class="breadcrumb-item active" aria-current="page">Appointments</li>
+                </ol>
+            </nav>
+            <h3 class="fw-bold mb-0 text-dark">Appointment Directory &amp; Schedule</h3>
+            <p class="text-muted small mb-0">Search, filter, monitor and manage outpatient consultation appointments.</p>
+        </div>
+        <div class="d-flex align-items-center gap-2">
+            <a href="{% url 'appointments:book' %}" class="btn btn-primary btn-sm px-3 fw-semibold shadow-sm">
+                <i class="bi bi-calendar-plus me-1"></i> Book New Appointment
+            </a>
+        </div>
+    </div>
+
+    <!-- Filter & Search Toolbar Card -->
+    <div class="card border shadow-sm mb-4">
+        <div class="card-body p-3">
+            <form method="get" action="{% url 'appointments:list' %}" class="row g-2 align-items-end">
+                <!-- Search Box -->
+                <div class="col-md-3">
+                    <label for="filter_q" class="form-label small fw-semibold text-muted mb-1">Search Patient</label>
+                    <div class="input-group input-group-sm">
+                        <span class="input-group-text bg-white border-end-0"><i class="bi bi-search text-muted"></i></span>
+                        <input type="text" name="q" id="filter_q" class="form-control border-start-0"
+                               placeholder="MRN, First or Last Name..." value="{{ q }}">
+                    </div>
+                </div>
+
+                <!-- Date Filter -->
+                <div class="col-sm-6 col-md-2">
+                    <label for="filter_date" class="form-label small fw-semibold text-muted mb-1">Appointment Date</label>
+                    <input type="date" name="date" id="filter_date" class="form-control form-control-sm" value="{{ date_filter }}">
+                </div>
+
+                <!-- Status Filter -->
+                <div class="col-sm-6 col-md-2">
+                    <label for="filter_status" class="form-label small fw-semibold text-muted mb-1">Status</label>
+                    <select name="status" id="filter_status" class="form-select form-select-sm">
+                        <option value="">All Statuses</option>
+                        {% for val, label in status_choices %}
+                        <option value="{{ val }}" {% if status_filter == val %}selected{% endif %}>{{ label }}</option>
+                        {% endfor %}
+                    </select>
+                </div>
+
+                <!-- Department Filter -->
+                <div class="col-sm-6 col-md-2">
+                    <label for="filter_dept" class="form-label small fw-semibold text-muted mb-1">Department</label>
+                    <select name="department" id="filter_dept" class="form-select form-select-sm">
+                        <option value="">All Departments</option>
+                        {% for dept in departments %}
+                        <option value="{{ dept.id }}" {% if department_filter|stringformat:"s" == dept.id|stringformat:"s" %}selected{% endif %}>
+                            {{ dept.name }}
+                        </option>
+                        {% endfor %}
+                    </select>
+                </div>
+
+                <!-- Doctor Filter -->
+                <div class="col-sm-6 col-md-2">
+                    <label for="filter_doc" class="form-label small fw-semibold text-muted mb-1">Doctor</label>
+                    <select name="doctor" id="filter_doc" class="form-select form-select-sm">
+                        <option value="">All Doctors</option>
+                        {% for doc in doctors %}
+                        <option value="{{ doc.id }}" {% if doctor_filter|stringformat:"s" == doc.id|stringformat:"s" %}selected{% endif %}>
+                            Dr. {{ doc.user.get_full_name|default:doc.user.username }}
+                        </option>
+                        {% endfor %}
+                    </select>
+                </div>
+
+                <!-- Action Buttons -->
+                <div class="col-12 col-md-1 d-flex gap-1">
+                    <button type="submit" class="btn btn-primary btn-sm w-100 fw-semibold" title="Apply Filters">
+                        <i class="bi bi-funnel"></i>
+                    </button>
+                    {% if q or date_filter or status_filter or department_filter or doctor_filter %}
+                    <a href="{% url 'appointments:list' %}" class="btn btn-outline-secondary btn-sm" title="Clear Filters">
+                        <i class="bi bi-x-lg"></i>
+                    </a>
+                    {% endif %}
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- Appointments Table Card -->
+    <div class="card border shadow-sm">
+        <div class="card-header bg-white py-3 border-bottom d-flex align-items-center justify-content-between">
+            <div class="d-flex align-items-center gap-2">
+                <h6 class="fw-bold mb-0 text-dark">Outpatient Bookings</h6>
+                <span class="badge bg-light text-dark border">{{ total_count }} Record{{ total_count|pluralize }}</span>
+            </div>
+            {% if date_filter %}
+            <span class="badge bg-info-subtle text-info border">
+                <i class="bi bi-calendar3 me-1"></i> Filtering Date: {{ date_filter }}
+            </span>
+            {% endif %}
+        </div>
+
+        <div class="table-responsive">
+            <table class="table table-hover align-middle mb-0">
+                <thead class="table-light text-muted small text-uppercase">
+                    <tr>
+                        <th style="width: 80px;">Token</th>
+                        <th>Patient</th>
+                        <th>Physician / Specialty</th>
+                        <th>Date &amp; Time</th>
+                        <th>Status</th>
+                        <th>Reason</th>
+                        <th class="text-end" style="width: 140px;">Actions</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for apt in appointments %}
+                    <tr>
+                        <td class="fw-bold text-secondary">
+                            #{{ apt.id }}
+                        </td>
+                        <td>
+                            <a href="{% url 'patients:detail' apt.patient.pk %}" class="fw-semibold text-primary text-decoration-none">
+                                {{ apt.patient.get_full_name }}
+                            </a>
+                            <div class="text-muted small">
+                                <span class="badge bg-light text-dark border font-monospace">{{ apt.patient.patient_id }}</span>
+                                {% if apt.patient.contact_number %}
+                                <span class="ms-1"><i class="bi bi-telephone text-muted"></i> {{ apt.patient.contact_number }}</span>
+                                {% endif %}
+                            </div>
+                        </td>
+                        <td>
+                            <div class="fw-semibold text-dark">
+                                Dr. {{ apt.doctor.user.get_full_name|default:apt.doctor.user.username }}
+                            </div>
+                            <span class="badge bg-secondary-subtle text-secondary small">
+                                {{ apt.doctor.department.name }}
+                            </span>
+                        </td>
+                        <td>
+                            <div class="fw-semibold text-dark">
+                                <i class="bi bi-calendar-event me-1 text-teal"></i> {{ apt.appointment_date|date:"d M Y" }}
+                            </div>
+                            <div class="text-muted small">
+                                <i class="bi bi-clock me-1"></i> {{ apt.start_time|time:"H:i" }} - {{ apt.end_time|time:"H:i" }}
+                            </div>
+                        </td>
+                        <td>
+                            {% if apt.status == "SCHEDULED" %}
+                            <span class="badge bg-primary-subtle text-primary border border-primary-subtle px-2 py-1">
+                                <i class="bi bi-calendar-check me-1"></i> Scheduled
+                            </span>
+                            {% elif apt.status == "CONFIRMED" %}
+                            <span class="badge bg-success-subtle text-success border border-success-subtle px-2 py-1">
+                                <i class="bi bi-check-circle me-1"></i> Confirmed
+                            </span>
+                            {% elif apt.status == "COMPLETED" %}
+                            <span class="badge bg-secondary-subtle text-secondary border border-secondary-subtle px-2 py-1">
+                                <i class="bi bi-check2-all me-1"></i> Completed
+                            </span>
+                            {% elif apt.status == "CANCELLED" %}
+                            <span class="badge bg-danger-subtle text-danger border border-danger-subtle px-2 py-1">
+                                <i class="bi bi-x-circle me-1"></i> Cancelled
+                            </span>
+                            {% elif apt.status == "NO_SHOW" %}
+                            <span class="badge bg-warning-subtle text-warning border border-warning-subtle px-2 py-1">
+                                <i class="bi bi-exclamation-circle me-1"></i> No Show
+                            </span>
+                            {% else %}
+                            <span class="badge bg-light text-dark border">{{ apt.get_status_display }}</span>
+                            {% endif %}
+                        </td>
+                        <td>
+                            <span class="text-truncate d-inline-block small text-muted" style="max-width: 200px;" title="{{ apt.reason }}">
+                                {{ apt.reason }}
+                            </span>
+                        </td>
+                        <td class="text-end">
+                            {% if apt.status != "COMPLETED" and apt.status != "CANCELLED" %}
+                            <!-- Cancel Button triggering Modal -->
+                            <button type="button" class="btn btn-outline-danger btn-sm"
+                                    data-bs-toggle="modal" data-bs-target="#cancelModal{{ apt.pk }}"
+                                    title="Cancel Appointment">
+                                <i class="bi bi-x-lg me-1"></i> Cancel
+                            </button>
+
+                            <!-- Cancel Confirmation Modal -->
+                            <div class="modal fade" id="cancelModal{{ apt.pk }}" tabindex="-1" aria-labelledby="cancelModalLabel{{ apt.pk }}" aria-hidden="true">
+                                <div class="modal-dialog modal-dialog-centered">
+                                    <div class="modal-content text-start">
+                                        <div class="modal-header border-bottom">
+                                            <h6 class="modal-title fw-bold text-danger" id="cancelModalLabel{{ apt.pk }}">
+                                                <i class="bi bi-exclamation-triangle-fill me-1"></i> Confirm Appointment Cancellation
+                                            </h6>
+                                            <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                                        </div>
+                                        <div class="modal-body">
+                                            <p class="mb-2">Are you sure you want to cancel the following appointment?</p>
+                                            <div class="bg-light p-3 rounded border mb-2 small">
+                                                <div><strong>Patient:</strong> {{ apt.patient.get_full_name }} ({{ apt.patient.patient_id }})</div>
+                                                <div><strong>Doctor:</strong> Dr. {{ apt.doctor.user.get_full_name|default:apt.doctor.user.username }} ({{ apt.doctor.department.name }})</div>
+                                                <div><strong>Date &amp; Time:</strong> {{ apt.appointment_date|date:"d M Y" }} at {{ apt.start_time|time:"H:i" }}</div>
+                                            </div>
+                                            <p class="small text-muted mb-0">This action will be permanently recorded in the system audit log.</p>
+                                        </div>
+                                        <div class="modal-footer border-top">
+                                            <button type="button" class="btn btn-light btn-sm border" data-bs-dismiss="modal">Keep Appointment</button>
+                                            <form method="post" action="{% url 'appointments:cancel' apt.pk %}" class="d-inline m-0">
+                                                {% csrf_token %}
+                                                <button type="submit" class="btn btn-danger btn-sm">
+                                                    Yes, Cancel Appointment
+                                                </button>
+                                            </form>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                            {% else %}
+                            <span class="text-muted small">No action</span>
+                            {% endif %}
+                        </td>
+                    </tr>
+                    {% empty %}
+                    <tr>
+                        <td colspan="7" class="text-center py-5">
+                            <i class="bi bi-calendar-x fs-1 text-muted d-block mb-2"></i>
+                            <h6 class="fw-bold text-dark">No Appointments Found</h6>
+                            <p class="text-muted small mb-3">No appointment records matched your search or filter parameters.</p>
+                            <a href="{% url 'appointments:book' %}" class="btn btn-primary btn-sm">
+                                <i class="bi bi-calendar-plus me-1"></i> Book an Appointment
+                            </a>
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+
+        <!-- Pagination Footer -->
+        {% if appointments.has_other_pages %}
+        <div class="card-footer bg-white py-3 border-top d-flex flex-column flex-sm-row align-items-center justify-content-between gap-2">
+            <span class="text-muted small">
+                Showing page {{ appointments.number }} of {{ appointments.paginator.num_pages }}
+                ({{ appointments.paginator.count }} total appointments)
+            </span>
+            <ul class="pagination pagination-sm mb-0">
+                {% if appointments.has_previous %}
+                <li class="page-item">
+                    <a class="page-link" href="?page={{ appointments.previous_page_number }}&q={{ q }}&date={{ date_filter }}&status={{ status_filter }}&department={{ department_filter }}&doctor={{ doctor_filter }}">
+                        &laquo; Prev
+                    </a>
+                </li>
+                {% else %}
+                <li class="page-item disabled"><span class="page-link">&laquo; Prev</span></li>
+                {% endif %}
+
+                {% for pnum in appointments.paginator.page_range %}
+                    {% if pnum == appointments.number %}
+                    <li class="page-item active"><span class="page-link">{{ pnum }}</span></li>
+                    {% elif pnum > appointments.number|add:"-3" and pnum < appointments.number|add:"3" %}
+                    <li class="page-item">
+                        <a class="page-link" href="?page={{ pnum }}&q={{ q }}&date={{ date_filter }}&status={{ status_filter }}&department={{ department_filter }}&doctor={{ doctor_filter }}">
+                            {{ pnum }}
+                        </a>
+                    </li>
+                    {% endif %}
+                {% endfor %}
+
+                {% if appointments.has_next %}
+                <li class="page-item">
+                    <a class="page-link" href="?page={{ appointments.next_page_number }}&q={{ q }}&date={{ date_filter }}&status={{ status_filter }}&department={{ department_filter }}&doctor={{ doctor_filter }}">
+                        Next &raquo;
+                    </a>
+                </li>
+                {% else %}
+                <li class="page-item disabled"><span class="page-link">Next &raquo;</span></li>
+                {% endif %}
+            </ul>
+        </div>
+        {% endif %}
+    </div>
+</div>
+{% endblock %}

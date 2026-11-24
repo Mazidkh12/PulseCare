@@ -1,0 +1,11 @@
+# Patient Case-Taking and Management System - Dependencies
+
+# Core Django Framework
+Django>=5.1.0,<6.2.0
+
+# Environment Configuration
+python-dotenv>=1.0.0
+
+# Database Driver for MySQL
+PyMySQL>=1.1.0
+cryptography>=42.0.0

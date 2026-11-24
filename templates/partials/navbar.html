@@ -1,0 +1,48 @@
+<header class="top-navbar d-flex align-items-center justify-content-between">
+    <div class="d-flex align-items-center gap-3">
+        <button class="btn btn-outline-secondary d-lg-none py-1 px-2" id="sidebarToggle" type="button" aria-label="Toggle navigation">
+            <i class="bi bi-list fs-5"></i>
+        </button>
+        <span class="d-none d-md-inline text-muted small fw-medium">
+            <i class="bi bi-hospital me-1 text-primary"></i> Patient Case-Taking &amp; Outpatient Management System
+        </span>
+    </div>
+
+    <div class="d-flex align-items-center gap-3">
+        {% if user.is_authenticated %}
+        <div class="d-flex align-items-center gap-2">
+            <div class="text-end d-none d-sm-block">
+                <div class="fw-semibold text-dark small">
+                    {{ user.get_full_name|default:user.username }}
+                </div>
+                <div>
+                    {% if user.role == "ADMIN" or user.is_superuser %}
+                        <span class="badge badge-role-admin">Administrator</span>
+                    {% elif user.role == "DOCTOR" %}
+                        <span class="badge badge-role-doctor">Doctor</span>
+                    {% elif user.role == "RECEPTIONIST" %}
+                        <span class="badge badge-role-receptionist">Receptionist</span>
+                    {% else %}
+                        <span class="badge bg-secondary">User</span>
+                    {% endif %}
+                </div>
+            </div>
+            <div class="rounded-circle bg-light border d-flex align-items-center justify-content-center text-primary fw-bold" style="width: 38px; height: 38px;">
+                <i class="bi bi-person-fill"></i>
+            </div>
+        </div>
+
+        <form action="{% url 'accounts:logout' %}" method="post" class="d-inline">
+            {% csrf_token %}
+            <button type="submit" class="btn btn-sm btn-outline-danger d-flex align-items-center gap-1" title="Log out">
+                <i class="bi bi-box-arrow-right"></i>
+                <span class="d-none d-md-inline">Logout</span>
+            </button>
+        </form>
+        {% else %}
+        <a href="{% url 'accounts:login' %}" class="btn btn-sm btn-primary">
+            <i class="bi bi-box-arrow-in-right me-1"></i> Login
+        </a>
+        {% endif %}
+    </div>
+</header>

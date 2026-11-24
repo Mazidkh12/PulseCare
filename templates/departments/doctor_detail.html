@@ -1,0 +1,147 @@
+{% extends "base.html" %}
+
+{% block title %}Dr. {{ profile.user.get_full_name|default:profile.user.username }}{% endblock %}
+
+{% block content %}
+<div class="container-fluid px-0">
+    <!-- Header -->
+    <div class="d-flex flex-column flex-md-row align-items-md-center justify-content-between mb-4 gap-2">
+        <div>
+            <div class="d-flex align-items-center gap-2 mb-1">
+                <h3 class="fw-bold mb-0 text-dark">Dr. {{ profile.user.get_full_name|default:profile.user.username }}</h3>
+                {% if profile.is_active %}
+                <span class="badge bg-success-subtle text-success border border-success-subtle">Active</span>
+                {% else %}
+                <span class="badge bg-secondary-subtle text-secondary border border-secondary-subtle">Inactive</span>
+                {% endif %}
+            </div>
+            <p class="text-muted small mb-0">{{ profile.specialization }} &bull; {{ profile.department.name }}</p>
+        </div>
+        <div class="d-flex gap-2">
+            <a href="{% url 'departments:doctor_edit' profile.pk %}" class="btn btn-outline-primary btn-sm">
+                <i class="bi bi-pencil me-1"></i> Edit
+            </a>
+            <form method="post" action="{% url 'departments:doctor_toggle_active' profile.pk %}" class="d-inline" onsubmit="return confirm('Are you sure you want to change the active status for this doctor?');">
+                {% csrf_token %}
+                {% if profile.is_active %}
+                <button type="submit" class="btn btn-outline-danger btn-sm">
+                    <i class="bi bi-power me-1"></i> Deactivate
+                </button>
+                {% else %}
+                <button type="submit" class="btn btn-outline-success btn-sm">
+                    <i class="bi bi-check2-circle me-1"></i> Activate
+                </button>
+                {% endif %}
+            </form>
+            <a href="{% url 'departments:doctor_list' %}" class="btn btn-light border btn-sm">
+                <i class="bi bi-arrow-left me-1"></i> Back
+            </a>
+        </div>
+    </div>
+
+    <!-- Doctor Details and Metrics -->
+    <div class="row g-3 mb-4">
+        <div class="col-md-7">
+            <div class="card border shadow-sm p-4 h-100">
+                <h5 class="fw-bold mb-3 text-dark"><i class="bi bi-person-lines-fill text-primary me-2"></i>Physician Information</h5>
+                <div class="row g-3">
+                    <div class="col-sm-6">
+                        <div class="text-muted small">Username</div>
+                        <div class="fw-semibold text-dark">@{{ profile.user.username }}</div>
+                    </div>
+                    <div class="col-sm-6">
+                        <div class="text-muted small">Email Address</div>
+                        <div class="fw-semibold text-dark">{{ profile.user.email|default:"--" }}</div>
+                    </div>
+                    <div class="col-sm-6">
+                        <div class="text-muted small">Contact Number</div>
+                        <div class="fw-semibold text-dark">{{ profile.contact_number|default:"--" }}</div>
+                    </div>
+                    <div class="col-sm-6">
+                        <div class="text-muted small">Department</div>
+                        <div>
+                            <a href="{% url 'departments:department_detail' profile.department.pk %}" class="fw-semibold text-primary text-decoration-none">
+                                {{ profile.department.name }}
+                            </a>
+                        </div>
+                    </div>
+                    <div class="col-sm-6">
+                        <div class="text-muted small">Specialization</div>
+                        <div class="fw-semibold text-dark">{{ profile.specialization }}</div>
+                    </div>
+                    <div class="col-sm-6">
+                        <div class="text-muted small">Qualifications</div>
+                        <div class="fw-semibold text-dark">{{ profile.qualification }}</div>
+                    </div>
+                </div>
+                <div class="text-muted small border-top pt-3 mt-4">
+                    Member since: <strong>{{ profile.created_at|date:"M d, Y" }}</strong>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-md-5">
+            <div class="card border shadow-sm p-4 h-100">
+                <h5 class="fw-bold mb-3 text-dark"><i class="bi bi-activity text-success me-2"></i>Outpatient Activity</h5>
+                <div class="d-flex justify-content-between align-items-center py-2 border-bottom">
+                    <span class="text-muted small">Total Booked Visits:</span>
+                    <span class="fw-bold fs-5 text-dark">{{ total_appointments }}</span>
+                </div>
+                <div class="d-flex justify-content-between align-items-center py-2 border-bottom">
+                    <span class="text-muted small">Completed Consultations:</span>
+                    <span class="fw-bold fs-5 text-success">{{ completed_appointments }}</span>
+                </div>
+                <div class="mt-3">
+                    <a href="{% url 'appointments:list' %}?doctor={{ profile.pk }}" class="btn btn-sm btn-outline-secondary w-100">
+                        <i class="bi bi-calendar-event me-1"></i> View Doctor's Appointments
+                    </a>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Recent Appointments -->
+    <div class="card border shadow-sm">
+        <div class="card-header bg-white py-3 border-bottom">
+            <h5 class="card-title fw-bold mb-0 text-dark">
+                <i class="bi bi-calendar-check text-primary me-2"></i> Recent Outpatient Visits
+            </h5>
+        </div>
+        <div class="table-responsive">
+            <table class="table table-hover align-middle mb-0">
+                <thead class="table-light text-muted small text-uppercase">
+                    <tr>
+                        <th>Date & Time</th>
+                        <th>Patient</th>
+                        <th>Token</th>
+                        <th>Status</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for apt in recent_appointments %}
+                    <tr>
+                        <td>{{ apt.appointment_date|date:"M d, Y" }} &bull; {{ apt.appointment_time|time:"H:i" }}</td>
+                        <td>
+                            <a href="{% url 'patients:detail' apt.patient.pk %}" class="fw-bold text-primary text-decoration-none">
+                                {{ apt.patient.get_full_name }}
+                            </a>
+                            <div class="text-muted small">{{ apt.patient.patient_id }}</div>
+                        </td>
+                        <td><span class="badge bg-light text-dark border">#{{ apt.token_number }}</span></td>
+                        <td>
+                            <span class="badge bg-light text-dark border">{{ apt.get_status_display }}</span>
+                        </td>
+                    </tr>
+                    {% empty %}
+                    <tr>
+                        <td colspan="4" class="text-center py-4 text-muted">
+                            No visits on record for this doctor yet.
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+{% endblock %}

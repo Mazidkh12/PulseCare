@@ -1,0 +1,148 @@
+<aside id="sidebar">
+    <!-- Clinic Brand / Logo -->
+    <a href="{% url 'accounts:dashboard_redirect' %}" class="sidebar-brand">
+        <i class="bi bi-heart-pulse-fill"></i>
+        <span>PulseCare</span>
+    </a>
+
+    <!-- Navigation Menu Items -->
+    <div class="sidebar-nav">
+        {% if user.is_authenticated %}
+
+        {% if user.role == "ADMIN" or user.is_superuser %}
+        <!-- ================= ADMINISTRATOR NAVIGATION ================= -->
+        <div class="sidebar-heading">Admin Portal</div>
+        <a href="{% url 'accounts:admin_dashboard' %}"
+            class="nav-link sidebar-item {% if request.resolver_match.url_name == 'admin_dashboard' %}active{% endif %}">
+            <i class="bi bi-speedometer2"></i>
+            <span>Dashboard</span>
+        </a>
+        <a href="{% url 'departments:department_list' %}"
+            class="nav-link sidebar-item {% if request.resolver_match.app_name == 'departments' and 'doctor' not in request.resolver_match.url_name %}active{% endif %}">
+            <i class="bi bi-diagram-3"></i>
+            <span>Departments</span>
+        </a>
+        <a href="{% url 'departments:doctor_list' %}"
+            class="nav-link sidebar-item {% if 'doctor' in request.resolver_match.url_name and request.resolver_match.app_name == 'departments' %}active{% endif %}">
+            <i class="bi bi-person-badge"></i>
+            <span>Doctors</span>
+        </a>
+        <a href="{% url 'patients:list' %}"
+            class="nav-link sidebar-item {% if request.resolver_match.app_name == 'patients' and request.resolver_match.url_name == 'list' %}active{% endif %}">
+            <i class="bi bi-people"></i>
+            <span>Patients</span>
+        </a>
+        <a href="{% url 'appointments:list' %}"
+            class="nav-link sidebar-item {% if request.resolver_match.app_name == 'appointments' and request.resolver_match.url_name == 'list' %}active{% endif %}">
+            <i class="bi bi-calendar-check"></i>
+            <span>Appointments</span>
+        </a>
+        <a href="{% url 'reports:index' %}"
+            class="nav-link sidebar-item {% if request.resolver_match.app_name == 'reports' %}active{% endif %}">
+            <i class="bi bi-graph-up-arrow"></i>
+            <span>Reports</span>
+        </a>
+        <a href="{% url 'audit:list' %}"
+            class="nav-link sidebar-item {% if request.resolver_match.app_name == 'audit' %}active{% endif %}">
+            <i class="bi bi-shield-check"></i>
+            <span>Audit Logs</span>
+        </a>
+        <a href="{% url 'accounts:user_list' %}"
+            class="nav-link sidebar-item {% if 'user_' in request.resolver_match.url_name %}active{% endif %}">
+            <i class="bi bi-person-gear"></i>
+            <span>User Management</span>
+        </a>
+
+        {% elif user.role == "RECEPTIONIST" %}
+        <!-- ================= RECEPTIONIST NAVIGATION ================= -->
+        <div class="sidebar-heading">Reception Desk</div>
+        <a href="{% url 'accounts:receptionist_dashboard' %}"
+            class="nav-link sidebar-item {% if request.resolver_match.url_name == 'receptionist_dashboard' %}active{% endif %}">
+            <i class="bi bi-speedometer2"></i>
+            <span>Dashboard</span>
+        </a>
+        <a href="{% url 'patients:register' %}"
+            class="nav-link sidebar-item {% if request.resolver_match.url_name == 'register' and request.resolver_match.app_name == 'patients' %}active{% endif %}">
+            <i class="bi bi-person-plus"></i>
+            <span>Register Patient</span>
+        </a>
+        <a href="{% url 'patients:list' %}"
+            class="nav-link sidebar-item {% if request.resolver_match.url_name == 'list' and request.resolver_match.app_name == 'patients' %}active{% endif %}">
+            <i class="bi bi-search"></i>
+            <span>Patient Search</span>
+        </a>
+        <a href="{% url 'appointments:book' %}"
+            class="nav-link sidebar-item {% if request.resolver_match.url_name == 'book' and request.resolver_match.app_name == 'appointments' %}active{% endif %}">
+            <i class="bi bi-calendar-plus"></i>
+            <span>Book Appointment</span>
+        </a>
+        <a href="{% url 'appointments:list' %}"
+            class="nav-link sidebar-item {% if request.resolver_match.url_name == 'list' and request.resolver_match.app_name == 'appointments' %}active{% endif %}">
+            <i class="bi bi-calendar-event"></i>
+            <span>All Appointments</span>
+        </a>
+        <a href="{% url 'appointments:list' %}?status=COMPLETED" class="nav-link sidebar-item">
+            <i class="bi bi-clock-history"></i>
+            <span>Appointment History</span>
+        </a>
+
+        {% elif user.role == "DOCTOR" %}
+        <!-- ================= DOCTOR NAVIGATION ================= -->
+        <div class="sidebar-heading">Clinical Practice</div>
+        <a href="{% url 'accounts:doctor_dashboard' %}"
+            class="nav-link sidebar-item {% if request.resolver_match.url_name == 'doctor_dashboard' %}active{% endif %}">
+            <i class="bi bi-speedometer2"></i>
+            <span>Dashboard</span>
+        </a>
+        <a href="{% url 'appointments:doctor_queue' %}"
+            class="nav-link sidebar-item {% if request.resolver_match.url_name == 'doctor_queue' %}active{% endif %}">
+            <i class="bi bi-calendar2-week"></i>
+            <span>My Appointments</span>
+        </a>
+        <a href="{% url 'appointments:doctor_queue' %}?filter=today" class="nav-link sidebar-item">
+            <i class="bi bi-list-task"></i>
+            <span>Consultation Queue</span>
+        </a>
+        <a href="{% url 'patients:doctor_patient_search' %}"
+            class="nav-link sidebar-item {% if request.resolver_match.url_name == 'doctor_patient_search' %}active{% endif %}">
+            <i class="bi bi-journal-medical"></i>
+            <span>Patient History</span>
+        </a>
+        <a href="{% url 'consultations:list' %}"
+            class="nav-link sidebar-item {% if request.resolver_match.app_name == 'consultations' %}active{% endif %}">
+            <i class="bi bi-file-earmark-medical"></i>
+            <span>Consultations</span>
+        </a>
+        <a href="{% url 'prescriptions:list' %}"
+            class="nav-link sidebar-item {% if request.resolver_match.app_name == 'prescriptions' %}active{% endif %}">
+            <i class="bi bi-prescription2"></i>
+            <span>Prescriptions</span>
+        </a>
+        {% endif %}
+
+        {% endif %}
+    </div>
+
+    <!-- Sidebar Footer / Account Info -->
+    {% if user.is_authenticated %}
+    <div class="sidebar-footer">
+        <div class="d-flex align-items-center justify-content-between">
+            <div class="overflow-hidden me-2">
+                <div class="text-white small fw-semibold text-truncate">
+                    {{ user.get_full_name|default:user.username }}
+                </div>
+                <div class="text-muted" style="font-size: 0.75rem;">
+                    {{ user.get_role_display|default:user.role }}
+                </div>
+            </div>
+            <form action="{% url 'accounts:logout' %}" method="post" class="m-0">
+                {% csrf_token %}
+                <button type="submit" class="btn btn-sm btn-link text-muted p-0 text-decoration-none" title="Log out">
+                    <i class="bi bi-box-arrow-right fs-5 text-secondary"></i>
+                </button>
+            </form>
+        </div>
+    </div>
+    {% endif %}
+</aside>
+<div class="sidebar-backdrop" id="sidebarBackdrop"></div>

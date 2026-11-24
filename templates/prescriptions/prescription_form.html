@@ -1,0 +1,292 @@
+{% extends "base.html" %}
+
+{% block title %}Prescription Builder &bull; {{ patient.get_full_name }} | PulseCare{% endblock %}
+
+{% block content %}
+<div class="container-fluid px-0">
+    <!-- Header -->
+    <div class="d-flex flex-column flex-md-row align-items-md-center justify-content-between mb-4 gap-2">
+        <div>
+            <nav aria-label="breadcrumb">
+                <ol class="breadcrumb mb-1 small">
+                    <li class="breadcrumb-item"><a href="{% url 'accounts:doctor_dashboard' %}" class="text-decoration-none">Dashboard</a></li>
+                    <li class="breadcrumb-item"><a href="{% url 'consultations:edit' consultation.pk %}" class="text-decoration-none">Consultation #{{ consultation.pk }}</a></li>
+                    <li class="breadcrumb-item active" aria-current="page">Prescription Builder</li>
+                </ol>
+            </nav>
+            <h3 class="fw-bold mb-0 text-dark">Medication Prescription Builder (Rx)</h3>
+            <p class="text-muted small mb-0">Formulate and officially issue outpatient pharmacotherapy orders.</p>
+        </div>
+        <div class="d-flex align-items-center gap-2">
+            <a href="{% url 'consultations:edit' consultation.pk %}" class="btn btn-outline-secondary btn-sm">
+                <i class="bi bi-arrow-left me-1"></i> Return to Consultation
+            </a>
+            {% if is_issued %}
+            <a href="{% url 'prescriptions:detail' prescription.pk %}" class="btn btn-outline-success btn-sm">
+                <i class="bi bi-printer me-1"></i> Printable Prescription
+            </a>
+            {% endif %}
+        </div>
+    </div>
+
+    <!-- Patient & Doctor Metadata Banner -->
+    <div class="card border shadow-sm mb-4 bg-light">
+        <div class="card-body p-4">
+            <div class="row g-3 align-items-center">
+                <div class="col-md-5">
+                    <div class="d-flex align-items-center gap-3">
+                        <div class="metric-icon-box metric-icon-info" style="width: 44px; height: 44px;">
+                            <i class="bi bi-prescription2 fs-4"></i>
+                        </div>
+                        <div>
+                            <h5 class="fw-bold mb-0 text-dark">{{ patient.get_full_name }}</h5>
+                            <span class="badge bg-secondary font-monospace">{{ patient.patient_id }}</span>
+                            <span class="text-muted small ms-2">{{ patient.get_gender_display }} &bull; DOB: {{ patient.date_of_birth|date:"d M Y" }}</span>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-md-4">
+                    <div class="small">Prescribing Physician: <strong>Dr. {{ doctor.user.get_full_name|default:doctor.user.username }}</strong></div>
+                    <div class="small text-muted">{{ doctor.specialization }} ({{ doctor.department.name }})</div>
+                    <div class="small text-muted">Consultation Date: {{ consultation.consultation_date|date:"d M Y - H:i" }}</div>
+                </div>
+                <div class="col-md-3 text-md-end">
+                    <div class="fw-bold font-monospace text-teal fs-5">{{ prescription.prescription_number }}</div>
+                    {% if is_issued %}
+                    <span class="badge bg-success px-3 py-1">Issued &bull; Locked</span>
+                    {% else %}
+                    <span class="badge bg-warning text-dark px-3 py-1">Draft</span>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+    </div>
+
+    {% if is_issued %}
+    <div class="alert alert-info border-info-subtle d-flex align-items-center gap-2 mb-4">
+        <i class="bi bi-info-circle-fill fs-5 text-info"></i>
+        <div>
+            This prescription has been <strong>ISSUED</strong>. Any modification to instructions requires documented justification in <em>Amendment Notes</em> to comply with clinical audit regulations.
+        </div>
+    </div>
+    {% endif %}
+
+    <!-- Prescription Form Card -->
+    <div class="card border shadow-sm">
+        <div class="card-header bg-white py-3 border-bottom d-flex align-items-center justify-content-between">
+            <div class="d-flex align-items-center gap-2">
+                <h6 class="fw-bold mb-0 text-dark">
+                    <i class="bi bi-capsule me-1 text-primary"></i> Prescribed Medication Items
+                </h6>
+                <span class="badge bg-light text-dark border">{{ items|length }} Item{{ items|length|pluralize }}</span>
+            </div>
+            {% if not is_issued %}
+            <button type="button" class="btn btn-outline-primary btn-sm fw-semibold" id="addMedicineBtn">
+                <i class="bi bi-plus-lg me-1"></i> Add Medication Row
+            </button>
+            {% endif %}
+        </div>
+
+        <form method="post" action="{% url 'prescriptions:create' consultation.pk %}" id="prescriptionForm">
+            {% csrf_token %}
+            {{ formset.management_form }}
+
+            <div class="card-body p-0">
+                <div class="table-responsive">
+                    <table class="table table-bordered table-hover align-middle mb-0" id="medicineTable">
+                        <thead class="table-light text-muted small text-uppercase">
+                            <tr>
+                                <th style="width: 22%;">Medicine Name <span class="text-danger">*</span></th>
+                                <th style="width: 12%;">Form</th>
+                                <th style="width: 10%;">Strength</th>
+                                <th style="width: 12%;">Dose <span class="text-danger">*</span></th>
+                                <th style="width: 12%;">Frequency <span class="text-danger">*</span></th>
+                                <th style="width: 10%;">Days <span class="text-danger">*</span></th>
+                                <th style="width: 12%;">Timing</th>
+                                <th style="width: 10%;">Instructions</th>
+                                {% if not is_issued %}<th class="text-center" style="width: 40px;">Del</th>{% endif %}
+                            </tr>
+                        </thead>
+                        <tbody id="medicineTableBody">
+                            {% for item_form in formset %}
+                            <tr class="medicine-row">
+                                <td>
+                                    {{ item_form.id }}
+                                    {{ item_form.medicine_name }}
+                                    {% if item_form.medicine_name.errors %}
+                                    <div class="text-danger small">{{ item_form.medicine_name.errors|join:", " }}</div>
+                                    {% endif %}
+                                </td>
+                                <td>{{ item_form.dosage_form }}</td>
+                                <td>{{ item_form.strength }}</td>
+                                <td>
+                                    {{ item_form.dosage }}
+                                    {% if item_form.dosage.errors %}
+                                    <div class="text-danger small">{{ item_form.dosage.errors|join:", " }}</div>
+                                    {% endif %}
+                                </td>
+                                <td>
+                                    {{ item_form.frequency }}
+                                    {% if item_form.frequency.errors %}
+                                    <div class="text-danger small">{{ item_form.frequency.errors|join:", " }}</div>
+                                    {% endif %}
+                                </td>
+                                <td>
+                                    {{ item_form.duration }}
+                                    {% if item_form.duration.errors %}
+                                    <div class="text-danger small">{{ item_form.duration.errors|join:", " }}</div>
+                                    {% endif %}
+                                </td>
+                                <td>{{ item_form.intake_timing }}</td>
+                                <td>{{ item_form.special_instructions }}</td>
+                                {% if not is_issued %}
+                                <td class="text-center">
+                                    {% if item_form.instance.pk %}
+                                    {{ item_form.DELETE }}
+                                    {% else %}
+                                    <button type="button" class="btn btn-outline-danger btn-sm p-1 remove-row-btn" title="Remove row">
+                                        <i class="bi bi-x-lg"></i>
+                                    </button>
+                                    {% endif %}
+                                </td>
+                                {% endif %}
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+
+                <!-- General Instructions & Amendment Notes -->
+                <div class="p-4 border-top bg-light">
+                    <div class="row g-3">
+                        <div class="col-md-7">
+                            <label for="id_general_instructions" class="form-label fw-semibold">
+                                <i class="bi bi-card-text me-1 text-primary"></i> General Dietary &amp; Patient Instructions
+                            </label>
+                            {{ form.general_instructions }}
+                        </div>
+                        <div class="col-md-5">
+                            <label for="id_amendment_notes" class="form-label fw-semibold">
+                                <i class="bi bi-shield-shaded me-1 text-warning"></i> Amendment Documentation
+                            </label>
+                            {{ form.amendment_notes }}
+                            <div class="form-text small">Required only if updating instructions on an already issued prescription.</div>
+                            {% if form.amendment_notes.errors %}
+                            <div class="text-danger small mt-1">{{ form.amendment_notes.errors|join:", " }}</div>
+                            {% endif %}
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Footer Action Bar -->
+            <div class="card-footer bg-white border-top py-3 d-flex align-items-center justify-content-between">
+                <div>
+                    <a href="{% url 'consultations:edit' consultation.pk %}" class="btn btn-light border btn-sm px-3">
+                        <i class="bi bi-arrow-left me-1"></i> Back to Case
+                    </a>
+                </div>
+                <div class="d-flex align-items-center gap-2">
+                    <button type="submit" name="action" value="save_draft" class="btn btn-outline-primary btn-sm px-3 fw-semibold">
+                        <i class="bi bi-save me-1"></i> Save Draft
+                    </button>
+                    {% if not is_issued %}
+                    <button type="button" class="btn btn-success btn-sm px-4 fw-semibold" data-bs-toggle="modal" data-bs-target="#issueModal">
+                        <i class="bi bi-check2-circle me-1"></i> Issue Official Prescription
+                    </button>
+                    {% else %}
+                    <a href="{% url 'prescriptions:detail' prescription.pk %}" class="btn btn-success btn-sm px-3 fw-semibold">
+                        <i class="bi bi-eye me-1"></i> View Issued Rx
+                    </a>
+                    {% endif %}
+                </div>
+            </div>
+        </form>
+    </div>
+</div>
+
+<!-- Issue Prescription Confirmation Modal -->
+<div class="modal fade" id="issueModal" tabindex="-1" aria-labelledby="issueModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content">
+            <div class="modal-header border-bottom">
+                <h6 class="modal-title fw-bold text-success" id="issueModalLabel">
+                    <i class="bi bi-check2-circle me-1"></i> Confirm Prescription Issuance
+                </h6>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                <p class="mb-2">Are you ready to officially issue this prescription for <strong>{{ patient.get_full_name }}</strong>?</p>
+                <div class="alert alert-warning py-2 px-3 small mb-2">
+                    <i class="bi bi-exclamation-triangle-fill me-1"></i>
+                    <strong>Important:</strong> Issuing locks the prescription items into the clinical audit record and stamps the official prescription date.
+                </div>
+                <p class="small text-muted mb-0">The linked appointment will automatically be marked completed.</p>
+            </div>
+            <div class="modal-footer border-top">
+                <button type="button" class="btn btn-light btn-sm border" data-bs-dismiss="modal">Keep in Draft</button>
+                <button type="submit" form="prescriptionForm" name="action" value="issue" class="btn btn-success btn-sm fw-semibold">
+                    Confirm &amp; Issue Rx
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Dynamic Formset Row Cloning Script -->
+<script>
+document.addEventListener("DOMContentLoaded", function () {
+    const addBtn = document.getElementById("addMedicineBtn");
+    const tableBody = document.getElementById("medicineTableBody");
+    const totalFormsInput = document.getElementById("id_items-TOTAL_FORMS");
+
+    if (!addBtn || !tableBody || !totalFormsInput) return;
+
+    addBtn.addEventListener("click", function () {
+        const currentCount = parseInt(totalFormsInput.value, 10);
+        const rows = tableBody.querySelectorAll(".medicine-row");
+        if (rows.length === 0) return;
+
+        // Clone the first row as template
+        const newRow = rows[0].cloneNode(true);
+
+        // Update indices for all input/select names and IDs
+        const regex = new RegExp(`items-(\\d+)-`, "g");
+        newRow.innerHTML = newRow.innerHTML.replace(regex, `items-${currentCount}-`);
+
+        // Clear values in cloned inputs
+        newRow.querySelectorAll("input").forEach(input => {
+            if (input.type === "hidden" && input.name.endsWith("-id")) {
+                input.value = "";
+            } else if (input.type === "checkbox") {
+                input.checked = false;
+            } else {
+                input.value = "";
+            }
+        });
+
+        // Set default dropdown selections
+        newRow.querySelectorAll("select").forEach(select => {
+            select.selectedIndex = 0;
+        });
+
+        // Append to table
+        tableBody.appendChild(newRow);
+
+        // Update management form total forms count
+        totalFormsInput.value = currentCount + 1;
+    });
+
+    // Remove row dynamically
+    tableBody.addEventListener("click", function (e) {
+        if (e.target.closest(".remove-row-btn")) {
+            const row = e.target.closest(".medicine-row");
+            const rows = tableBody.querySelectorAll(".medicine-row");
+            if (rows.length > 1) {
+                row.remove();
+            }
+        }
+    });
+});
+</script>
+{% endblock %}

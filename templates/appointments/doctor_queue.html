@@ -1,0 +1,298 @@
+{% extends "base.html" %}
+
+{% block title %}My Outpatient Queue | PulseCare{% endblock %}
+
+{% block content %}
+<div class="container-fluid px-0">
+    <!-- Header -->
+    <div class="d-flex flex-column flex-md-row align-items-md-center justify-content-between mb-4 gap-2">
+        <div>
+            <nav aria-label="breadcrumb">
+                <ol class="breadcrumb mb-1 small">
+                    <li class="breadcrumb-item"><a href="{% url 'accounts:doctor_dashboard' %}" class="text-decoration-none">Dashboard</a></li>
+                    <li class="breadcrumb-item active" aria-current="page">My Appointments Queue</li>
+                </ol>
+            </nav>
+            <h3 class="fw-bold mb-0 text-dark">Outpatient Consultation Queue</h3>
+            <p class="text-muted small mb-0">
+                Dr. {{ user.get_full_name|default:user.username }} &bull; {{ doctor.specialization }} ({{ doctor.department.name }})
+            </p>
+        </div>
+        <div class="d-flex align-items-center gap-2">
+            <a href="{% url 'consultations:create' %}" class="btn btn-outline-success btn-sm px-3 fw-semibold">
+                <i class="bi bi-person-walking me-1"></i> New Walk-In Patient
+            </a>
+            <a href="{% url 'patients:doctor_patient_search' %}" class="btn btn-outline-secondary btn-sm px-3 fw-semibold">
+                <i class="bi bi-search me-1"></i> Search Patient History
+            </a>
+        </div>
+    </div>
+
+    <!-- Filter Nav Tabs -->
+    <ul class="nav nav-pills mb-3 border-bottom pb-2">
+        <li class="nav-item">
+            <a class="nav-link py-1 px-3 {% if active_tab == 'today' %}active{% endif %}"
+               href="{% url 'appointments:doctor_queue' %}?filter=today">
+                <i class="bi bi-calendar-day me-1"></i> Today
+                <span class="badge {% if active_tab == 'today' %}bg-white text-primary{% else %}bg-secondary-subtle text-secondary{% endif %} ms-1">
+                    {{ today_total }}
+                </span>
+            </a>
+        </li>
+        <li class="nav-item">
+            <a class="nav-link py-1 px-3 {% if active_tab == 'upcoming' %}active{% endif %}"
+               href="{% url 'appointments:doctor_queue' %}?filter=upcoming">
+                <i class="bi bi-calendar-event me-1"></i> Upcoming
+            </a>
+        </li>
+        <li class="nav-item">
+            <a class="nav-link py-1 px-3 {% if active_tab == 'previous' %}active{% endif %}"
+               href="{% url 'appointments:doctor_queue' %}?filter=previous">
+                <i class="bi bi-clock-history me-1"></i> Previous
+            </a>
+        </li>
+        <li class="nav-item">
+            <a class="nav-link py-1 px-3 {% if active_tab == 'all' %}active{% endif %}"
+               href="{% url 'appointments:doctor_queue' %}?filter=all">
+                <i class="bi bi-grid-3x3-gap me-1"></i> All My Visits
+            </a>
+        </li>
+    </ul>
+
+    <!-- Filter & Search Toolbar Card -->
+    <div class="card border shadow-sm mb-4">
+        <div class="card-body p-3">
+            <form method="get" action="{% url 'appointments:doctor_queue' %}" class="row g-2 align-items-end">
+                <input type="hidden" name="filter" value="{{ active_tab }}">
+
+                <!-- Search Input -->
+                <div class="col-md-4">
+                    <label for="queue_q" class="form-label small fw-semibold text-muted mb-1">Search Patient</label>
+                    <div class="input-group input-group-sm">
+                        <span class="input-group-text bg-white border-end-0"><i class="bi bi-search text-muted"></i></span>
+                        <input type="text" name="q" id="queue_q" class="form-control border-start-0"
+                               placeholder="MRN, First Name or Last Name..." value="{{ q }}">
+                    </div>
+                </div>
+
+                <!-- Status Filter -->
+                <div class="col-sm-6 col-md-2">
+                    <label for="queue_status" class="form-label small fw-semibold text-muted mb-1">Status</label>
+                    <select name="status" id="queue_status" class="form-select form-select-sm">
+                        <option value="">All Statuses</option>
+                        {% for val, label in status_choices %}
+                        <option value="{{ val }}" {% if status_filter == val %}selected{% endif %}>{{ label }}</option>
+                        {% endfor %}
+                    </select>
+                </div>
+
+                <!-- Date Range Filters -->
+                <div class="col-sm-6 col-md-2">
+                    <label for="queue_start_date" class="form-label small fw-semibold text-muted mb-1">From Date</label>
+                    <input type="date" name="start_date" id="queue_start_date" class="form-control form-control-sm" value="{{ start_date }}">
+                </div>
+
+                <div class="col-sm-6 col-md-2">
+                    <label for="queue_end_date" class="form-label small fw-semibold text-muted mb-1">To Date</label>
+                    <input type="date" name="end_date" id="queue_end_date" class="form-control form-control-sm" value="{{ end_date }}">
+                </div>
+
+                <!-- Buttons -->
+                <div class="col-sm-6 col-md-2 d-flex gap-1">
+                    <button type="submit" class="btn btn-primary btn-sm w-100 fw-semibold" title="Apply Filters">
+                        <i class="bi bi-funnel me-1"></i> Filter
+                    </button>
+                    {% if q or status_filter or start_date or end_date %}
+                    <a href="{% url 'appointments:doctor_queue' %}?filter={{ active_tab }}" class="btn btn-outline-secondary btn-sm" title="Clear Filters">
+                        <i class="bi bi-x-lg"></i>
+                    </a>
+                    {% endif %}
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- Appointment Queue Table Card -->
+    <div class="card border shadow-sm">
+        <div class="card-header bg-white py-3 border-bottom d-flex align-items-center justify-content-between">
+            <div class="d-flex align-items-center gap-2">
+                <h6 class="fw-bold mb-0 text-dark">
+                    <i class="bi bi-person-lines-fill me-1 text-primary"></i> Scheduled Patients
+                </h6>
+                <span class="badge bg-light text-dark border">{{ total_count }} Record{{ total_count|pluralize }}</span>
+            </div>
+            {% if active_tab == 'today' %}
+            <span class="badge bg-primary-subtle text-primary border border-primary-subtle">
+                <i class="bi bi-clock me-1"></i> Showing Today's Slots
+            </span>
+            {% endif %}
+        </div>
+
+        <div class="table-responsive">
+            <table class="table table-hover align-middle mb-0">
+                <thead class="table-light text-muted small text-uppercase">
+                    <tr>
+                        <th style="width: 130px;">Date &amp; Time</th>
+                        <th>Patient Details</th>
+                        <th>Department</th>
+                        <th>Reason for Visit</th>
+                        <th>Status</th>
+                        <th class="text-end" style="width: 220px;">Actions</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for apt in appointments %}
+                    <tr>
+                        <td>
+                            <div class="fw-bold text-dark">
+                                {{ apt.appointment_date|date:"d M Y" }}
+                            </div>
+                            <div class="text-teal small fw-semibold">
+                                <i class="bi bi-clock me-1"></i> {{ apt.start_time|time:"H:i" }} - {{ apt.end_time|time:"H:i" }}
+                            </div>
+                        </td>
+                        <td>
+                            <a href="{% url 'patients:doctor_history' apt.patient.pk %}" class="fw-bold text-primary text-decoration-none">
+                                {{ apt.patient.get_full_name }}
+                            </a>
+                            <div class="text-muted small">
+                                <span class="badge bg-light text-secondary border font-monospace">{{ apt.patient.patient_id }}</span>
+                                <span class="ms-1">{{ apt.patient.get_gender_display }} &bull; DOB: {{ apt.patient.date_of_birth|date:"d M Y" }}</span>
+                            </div>
+                        </td>
+                        <td>
+                            <span class="badge bg-secondary-subtle text-secondary">
+                                {{ apt.doctor.department.name }}
+                            </span>
+                        </td>
+                        <td>
+                            <span class="small text-muted text-truncate d-inline-block" style="max-width: 220px;" title="{{ apt.reason }}">
+                                {{ apt.reason|default:"General consultation" }}
+                            </span>
+                        </td>
+                        <td>
+                            {% if apt.status == "SCHEDULED" %}
+                            <span class="badge bg-primary-subtle text-primary border border-primary-subtle px-2 py-1">Scheduled</span>
+                            {% elif apt.status == "CONFIRMED" %}
+                            <span class="badge bg-success-subtle text-success border border-success-subtle px-2 py-1">Confirmed</span>
+                            {% elif apt.status == "IN_PROGRESS" %}
+                            <span class="badge bg-warning-subtle text-warning border border-warning-subtle px-2 py-1">In Progress</span>
+                            {% elif apt.status == "COMPLETED" %}
+                            <span class="badge bg-secondary-subtle text-secondary border border-secondary-subtle px-2 py-1">Completed</span>
+                            {% elif apt.status == "CANCELLED" %}
+                            <span class="badge bg-danger-subtle text-danger border border-danger-subtle px-2 py-1">Cancelled</span>
+                            {% elif apt.status == "NO_SHOW" %}
+                            <span class="badge bg-warning-subtle text-warning border border-warning-subtle px-2 py-1">No Show</span>
+                            {% else %}
+                            <span class="badge bg-light text-dark border">{{ apt.get_status_display }}</span>
+                            {% endif %}
+                        </td>
+                        <td class="text-end">
+                            <div class="d-inline-flex gap-1 align-items-center">
+                                {% if apt.status == "SCHEDULED" %}
+                                <!-- Confirm Status Button -->
+                                <form method="post" action="{% url 'appointments:update_status' apt.pk %}" class="d-inline m-0">
+                                    {% csrf_token %}
+                                    <input type="hidden" name="status" value="CONFIRMED">
+                                    <button type="submit" class="btn btn-outline-success btn-sm py-1 px-2" title="Confirm Attendance">
+                                        <i class="bi bi-check-lg"></i> Confirm
+                                    </button>
+                                </form>
+                                <!-- Start Consultation Button -->
+                                <a href="{% url 'appointments:start_consultation' apt.pk %}" class="btn btn-primary btn-sm py-1 px-2 fw-semibold">
+                                    <i class="bi bi-play-circle me-1"></i> Consult
+                                </a>
+                                {% elif apt.status == "CONFIRMED" %}
+                                <!-- Start Consultation Button -->
+                                <a href="{% url 'appointments:start_consultation' apt.pk %}" class="btn btn-primary btn-sm py-1 px-2 fw-semibold">
+                                    <i class="bi bi-play-circle me-1"></i> Consult
+                                </a>
+                                <!-- Mark No Show Option -->
+                                <form method="post" action="{% url 'appointments:update_status' apt.pk %}" class="d-inline m-0">
+                                    {% csrf_token %}
+                                    <input type="hidden" name="status" value="NO_SHOW">
+                                    <button type="submit" class="btn btn-outline-warning btn-sm py-1 px-2" title="Mark Patient as No-Show">
+                                        <i class="bi bi-person-x"></i>
+                                    </button>
+                                </form>
+                                {% elif apt.status == "IN_PROGRESS" %}
+                                <!-- Continue Consultation Button -->
+                                <a href="{% url 'appointments:start_consultation' apt.pk %}" class="btn btn-warning btn-sm py-1 px-2 fw-semibold text-dark">
+                                    <i class="bi bi-arrow-repeat me-1"></i> Continue
+                                </a>
+                                {% elif apt.status == "COMPLETED" %}
+                                {% if apt.consultation %}
+                                <a href="{% url 'consultations:detail' apt.consultation.pk %}" class="btn btn-outline-secondary btn-sm py-1 px-2">
+                                    <i class="bi bi-file-earmark-medical me-1"></i> View Case
+                                </a>
+                                {% else %}
+                                <span class="badge bg-light text-muted border">Completed</span>
+                                {% endif %}
+                                {% else %}
+                                <span class="text-muted small">No action</span>
+                                {% endif %}
+                                <!-- Link to Patient History -->
+                                <a href="{% url 'patients:doctor_history' apt.patient.pk %}" class="btn btn-outline-dark btn-sm py-1 px-2" title="View Patient Medical History">
+                                    <i class="bi bi-clock-history"></i>
+                                </a>
+                            </div>
+                        </td>
+                    </tr>
+                    {% empty %}
+                    <tr>
+                        <td colspan="6" class="text-center py-5">
+                            <i class="bi bi-inbox fs-1 text-muted d-block mb-2"></i>
+                            <h6 class="fw-bold text-dark">No Appointments Found</h6>
+                            <p class="text-muted small mb-0">No patient bookings matched the current tab or filter parameters.</p>
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+
+        <!-- Pagination Footer -->
+        {% if appointments.has_other_pages %}
+        <div class="card-footer bg-white py-3 border-top d-flex flex-column flex-sm-row align-items-center justify-content-between gap-2">
+            <span class="text-muted small">
+                Showing page {{ appointments.number }} of {{ appointments.paginator.num_pages }}
+                ({{ appointments.paginator.count }} total appointments)
+            </span>
+            <ul class="pagination pagination-sm mb-0">
+                {% if appointments.has_previous %}
+                <li class="page-item">
+                    <a class="page-link" href="?page={{ appointments.previous_page_number }}&filter={{ active_tab }}&q={{ q }}&status={{ status_filter }}&start_date={{ start_date }}&end_date={{ end_date }}">
+                        &laquo; Prev
+                    </a>
+                </li>
+                {% else %}
+                <li class="page-item disabled"><span class="page-link">&laquo; Prev</span></li>
+                {% endif %}
+
+                {% for pnum in appointments.paginator.page_range %}
+                    {% if pnum == appointments.number %}
+                    <li class="page-item active"><span class="page-link">{{ pnum }}</span></li>
+                    {% elif pnum > appointments.number|add:"-3" and pnum < appointments.number|add:"3" %}
+                    <li class="page-item">
+                        <a class="page-link" href="?page={{ pnum }}&filter={{ active_tab }}&q={{ q }}&status={{ status_filter }}&start_date={{ start_date }}&end_date={{ end_date }}">
+                            {{ pnum }}
+                        </a>
+                    </li>
+                    {% endif %}
+                {% endfor %}
+
+                {% if appointments.has_next %}
+                <li class="page-item">
+                    <a class="page-link" href="?page={{ appointments.next_page_number }}&filter={{ active_tab }}&q={{ q }}&status={{ status_filter }}&start_date={{ start_date }}&end_date={{ end_date }}">
+                        Next &raquo;
+                    </a>
+                </li>
+                {% else %}
+                <li class="page-item disabled"><span class="page-link">Next &raquo;</span></li>
+                {% endif %}
+            </ul>
+        </div>
+        {% endif %}
+    </div>
+</div>
+{% endblock %}

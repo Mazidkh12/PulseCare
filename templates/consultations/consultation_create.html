@@ -1,0 +1,82 @@
+{% extends "base.html" %}
+
+{% block title %}Start Walk-In Consultation | PulseCare{% endblock %}
+
+{% block content %}
+<div class="container-fluid px-0">
+    <div class="d-flex flex-column flex-md-row align-items-md-center justify-content-between mb-4 gap-2">
+        <div>
+            <nav aria-label="breadcrumb">
+                <ol class="breadcrumb mb-1 small">
+                    <li class="breadcrumb-item"><a href="{% url 'accounts:doctor_dashboard' %}" class="text-decoration-none">Dashboard</a></li>
+                    <li class="breadcrumb-item"><a href="{% url 'consultations:list' %}" class="text-decoration-none">Consultations</a></li>
+                    <li class="breadcrumb-item active" aria-current="page">Walk-In Intake</li>
+                </ol>
+            </nav>
+            <h3 class="fw-bold mb-0 text-dark">Initiate Walk-In Consultation</h3>
+            <p class="text-muted small mb-0">Open an unscheduled direct consultation session for an active registered patient.</p>
+        </div>
+        <div>
+            <a href="{% url 'appointments:doctor_queue' %}" class="btn btn-outline-secondary btn-sm">
+                <i class="bi bi-arrow-left me-1"></i> Back to Queue
+            </a>
+        </div>
+    </div>
+
+    <div class="row justify-content-center">
+        <div class="col-lg-8 col-xl-7">
+            <div class="card border shadow-sm">
+                <div class="card-header bg-white py-3 border-bottom d-flex align-items-center gap-2">
+                    <div class="metric-icon-box metric-icon-success" style="width: 38px; height: 38px;">
+                        <i class="bi bi-person-walking fs-5"></i>
+                    </div>
+                    <div>
+                        <h6 class="fw-bold mb-0 text-dark">Walk-In Patient Intake</h6>
+                        <span class="text-muted small">No scheduled appointment required for outpatient walk-ins.</span>
+                    </div>
+                </div>
+
+                <div class="card-body p-4">
+                    {% if form.non_field_errors %}
+                    <div class="alert alert-danger mb-3" role="alert">
+                        {{ form.non_field_errors|join:", " }}
+                    </div>
+                    {% endif %}
+
+                    <form method="post" action="{% url 'consultations:create' %}">
+                        {% csrf_token %}
+
+                        <div class="mb-3">
+                            <label for="id_walkin_patient" class="form-label fw-semibold">
+                                Select Patient <span class="text-danger">*</span>
+                            </label>
+                            {{ form.patient }}
+                            {% if form.patient.errors %}
+                            <div class="text-danger small mt-1">{{ form.patient.errors|join:", " }}</div>
+                            {% endif %}
+                            <div class="form-text">Choose an active patient record. If not registered, receptionist must register first.</div>
+                        </div>
+
+                        <div class="mb-4">
+                            <label for="id_chief_complaint" class="form-label fw-semibold">
+                                Presenting Complaint / Symptoms <span class="text-danger">*</span>
+                            </label>
+                            {{ form.chief_complaint }}
+                            {% if form.chief_complaint.errors %}
+                            <div class="text-danger small mt-1">{{ form.chief_complaint.errors|join:", " }}</div>
+                            {% endif %}
+                        </div>
+
+                        <div class="d-flex align-items-center justify-content-end gap-2 pt-3 border-top">
+                            <a href="{% url 'appointments:doctor_queue' %}" class="btn btn-light border px-3">Cancel</a>
+                            <button type="submit" class="btn btn-primary px-4 fw-semibold">
+                                <i class="bi bi-play-circle me-1"></i> Start Consultation Session
+                            </button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

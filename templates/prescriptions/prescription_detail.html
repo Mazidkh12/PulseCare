@@ -1,0 +1,176 @@
+{% extends "base.html" %}
+
+{% block title %}Prescription {{ prescription.prescription_number }} | PulseCare{% endblock %}
+
+{% block extra_head %}
+<style>
+@media print {
+    #sidebar, .top-navbar, .no-print, footer {
+        display: none !important;
+    }
+    #content {
+        margin: 0 !important;
+        padding: 0 !important;
+    }
+    .print-card {
+        border: none !important;
+        box-shadow: none !important;
+    }
+}
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="container-fluid px-0">
+    <!-- Action Bar (hidden in print) -->
+    <div class="d-flex flex-column flex-md-row align-items-md-center justify-content-between mb-4 gap-2 no-print">
+        <div>
+            <nav aria-label="breadcrumb">
+                <ol class="breadcrumb mb-1 small">
+                    <li class="breadcrumb-item"><a href="{% url 'accounts:doctor_dashboard' %}" class="text-decoration-none">Dashboard</a></li>
+                    <li class="breadcrumb-item"><a href="{% url 'prescriptions:list' %}" class="text-decoration-none">Prescriptions</a></li>
+                    <li class="breadcrumb-item active" aria-current="page">{{ prescription.prescription_number }}</li>
+                </ol>
+            </nav>
+            <h3 class="fw-bold mb-0 text-dark">Outpatient Medication Prescription</h3>
+        </div>
+        <div class="d-flex align-items-center gap-2">
+            <button onclick="window.print()" class="btn btn-primary btn-sm px-3 fw-semibold">
+                <i class="bi bi-printer me-1"></i> Print Prescription
+            </button>
+            <a href="{% url 'consultations:edit' consultation.pk %}" class="btn btn-outline-secondary btn-sm">
+                <i class="bi bi-arrow-left me-1"></i> View Case
+            </a>
+            <a href="{% url 'prescriptions:list' %}" class="btn btn-outline-secondary btn-sm">
+                Back to Registry
+            </a>
+        </div>
+    </div>
+
+    <!-- Printable Prescription Card -->
+    <div class="card border shadow-sm print-card mx-auto" style="max-width: 850px;">
+        <div class="card-body p-4 p-md-5">
+
+            <!-- Clinic & Physician Header -->
+            <div class="row align-items-start border-bottom pb-4 mb-4">
+                <div class="col-sm-7">
+                    <div class="d-flex align-items-center gap-2 mb-1">
+                        <i class="bi bi-heart-pulse-fill text-primary fs-3"></i>
+                        <h4 class="fw-bold text-dark mb-0">PulseCare Clinic</h4>
+                    </div>
+                    <div class="text-muted small">Multi-Specialty Outpatient Healthcare &bull; Reg: CLINIC-2026-PC</div>
+                    <div class="text-muted small">100 Health Avenue, Medical Enclave &bull; Ph: +91 98765 43210</div>
+                </div>
+                <div class="col-sm-5 text-sm-end mt-3 mt-sm-0">
+                    <h5 class="fw-bold text-dark mb-0">Dr. {{ doctor.user.get_full_name|default:doctor.user.username }}</h5>
+                    <div class="text-teal fw-semibold small">{{ doctor.qualification }}</div>
+                    <div class="text-muted small">{{ doctor.specialization }}</div>
+                    <div class="badge bg-secondary-subtle text-secondary border mt-1">{{ doctor.department.name }}</div>
+                </div>
+            </div>
+
+            <!-- Patient Demographic Box -->
+            <div class="bg-light p-3 rounded border mb-4">
+                <div class="row g-2 small">
+                    <div class="col-sm-6">
+                        <strong>Patient:</strong> {{ patient.get_full_name }}
+                        <span class="badge bg-light text-secondary border font-monospace ms-1">{{ patient.patient_id }}</span>
+                    </div>
+                    <div class="col-sm-6 text-sm-end">
+                        <strong>Date:</strong> {{ prescription.prescription_date|date:"d M Y - H:i" }}
+                    </div>
+                    <div class="col-sm-4">
+                        <strong>Age/Gender:</strong> {{ patient.get_gender_display }} &bull; DOB: {{ patient.date_of_birth|date:"d M Y" }}
+                    </div>
+                    <div class="col-sm-4">
+                        <strong>Blood Group:</strong> {{ patient.blood_group }}
+                    </div>
+                    <div class="col-sm-4 text-sm-end">
+                        <strong>Rx Number:</strong> <span class="font-monospace fw-bold text-dark">{{ prescription.prescription_number }}</span>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Medical Prescription Body (Rx) -->
+            <div class="mb-4">
+                <div class="display-6 fw-bold text-primary font-serif mb-3" style="font-family: 'Times New Roman', serif;">
+                    &#8478;
+                </div>
+
+                <div class="table-responsive">
+                    <table class="table table-bordered align-middle">
+                        <thead class="table-light text-muted small text-uppercase">
+                            <tr>
+                                <th style="width: 5%;">#</th>
+                                <th style="width: 30%;">Medication &amp; Strength</th>
+                                <th style="width: 15%;">Dosage Form</th>
+                                <th style="width: 15%;">Dose</th>
+                                <th style="width: 15%;">Frequency</th>
+                                <th style="width: 10%;">Duration</th>
+                                <th style="width: 10%;">Timing</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for item in items %}
+                            <tr>
+                                <td class="text-center fw-bold text-secondary">{{ forloop.counter }}</td>
+                                <td>
+                                    <div class="fw-bold text-dark">{{ item.medicine_name }}</div>
+                                    {% if item.strength %}
+                                    <span class="badge bg-light text-secondary border small">{{ item.strength }}</span>
+                                    {% endif %}
+                                    {% if item.special_instructions %}
+                                    <div class="small text-muted fst-italic mt-1">{{ item.special_instructions }}</div>
+                                    {% endif %}
+                                </td>
+                                <td>{{ item.get_dosage_form_display }}</td>
+                                <td class="fw-semibold">{{ item.dosage }}</td>
+                                <td><span class="badge bg-light text-dark border">{{ item.frequency }}</span></td>
+                                <td>{{ item.duration }} day{{ item.duration|pluralize }}</td>
+                                <td class="small">{{ item.get_intake_timing_display }}</td>
+                            </tr>
+                            {% empty %}
+                            <tr>
+                                <td colspan="7" class="text-center py-3 text-muted">No medicines prescribed.</td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+
+            <!-- Dietary & General Instructions -->
+            {% if prescription.general_instructions %}
+            <div class="mb-4">
+                <h6 class="fw-bold text-dark border-bottom pb-2">
+                    <i class="bi bi-info-circle text-primary me-1"></i> Patient Instructions &amp; Dietary Advice:
+                </h6>
+                <p class="small text-muted mb-0" style="white-space: pre-line;">{{ prescription.general_instructions }}</p>
+            </div>
+            {% endif %}
+
+            {% if prescription.amendment_notes %}
+            <div class="p-3 bg-light rounded border border-warning-subtle mb-4">
+                <div class="small fw-bold text-warning-emphasis">Prescription Amendment Addendum:</div>
+                <div class="small text-muted">{{ prescription.amendment_notes }}</div>
+            </div>
+            {% endif %}
+
+            <!-- Footer Signature Block -->
+            <div class="row pt-5 mt-4 border-top align-items-end">
+                <div class="col-6">
+                    <div class="small text-muted">
+                        <em>PulseCare Electronic Health Record &bull; Verification Token: {{ prescription.pk }}</em>
+                    </div>
+                </div>
+                <div class="col-6 text-end">
+                    <div class="fw-bold text-dark">Dr. {{ doctor.user.get_full_name|default:doctor.user.username }}</div>
+                    <div class="small text-muted">{{ doctor.specialization }}</div>
+                    <div class="text-muted small" style="font-size: 0.75rem;">Authorized Clinical Signatory</div>
+                </div>
+            </div>
+
+        </div>
+    </div>
+</div>
+{% endblock %}
